@@ -170,8 +170,8 @@ __global__ void calculate_Matrix(int M, int N, int K, const float *A, const floa
     // - threadIdx.y / blockIdx.y -> 输出矩阵的列 col
     //
     // 对于常见的 blockDim(32, by)，一个 warp 内通常是 row 连续、col 固定。
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (row < M && col < N)
     {

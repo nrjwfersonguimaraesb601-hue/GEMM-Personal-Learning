@@ -39,8 +39,9 @@
 
 - [naive_kernel](./naive_kernel/README.md)：实现并验证了最基础的 naive CUDA GEMM kernel
 - 为 naive kernel 写了一个 benchmark 版本
-- 在 RTX 4060 Laptop GPU 上跑出了一组 baseline 数据
-- 开始记录这个 naive kernel 的性能表现和瓶颈
+- 在 RTX 4060 Laptop GPU 上跑出了一组刻意保留 non-coalesced 访问方式的 baseline 数据
+- [Global_Memory_Coalescing_kernel](./Global_Memory_Coalescing_kernel/README.md)：完成了第一步 global memory coalescing 优化，并记录了相对 naive 的提升
+- 用 [TODO.md](./TODO.md) 维护后续优化路线
 
 换句话说，我现在还处在“先把 baseline 做扎实”的阶段。
 
@@ -70,6 +71,8 @@
 当前仓库结构还比较简单：
 
 - `naive_kernel/`: 最基础的一版 CUDA GEMM 实现，以及对应的 benchmark 和性能分析文档
+- `Global_Memory_Coalescing_kernel/`: 第一版 coalesced global-memory 访问优化，以及对应 benchmark
+- `TODO.md`: 按 worklog 路线维护后续优化任务
 
 后面如果我继续推进优化版本，预计会逐渐补充更多子目录，比如：
 

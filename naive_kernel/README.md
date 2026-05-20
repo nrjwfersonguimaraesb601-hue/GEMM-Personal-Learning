@@ -25,12 +25,20 @@
 - 一个 thread 负责计算一个输出元素 `C[row][col]`
 - 每个 thread 都会完整遍历一次 `K` 维
 - accumulation 过程直接从 global memory 读取 `A` 和 `B`
+- 当前线程映射刻意做成了 non-coalesced baseline
 - 没有使用 shared memory tiling
 - 没有使用 register blocking
 - 没有使用 vectorized load/store
 - 没有做 warp-level optimization
 
-这样的实现优点是代码直观、容易验证；缺点也很明显：`A` 和 `B` 中的数据会被大量重复从 global memory 加载，数据复用很差，因此整体会非常受 memory traffic 限制，无法充分发挥 RTX 4060 的真实算力。
+这里当前保留的是一个“故意不做 coalescing”的对照版本：
+
+- warp 内通常是 `row` 连续、`col` 固定
+- `A[row * K + k]` 是跨步访问
+- `C[row * N + col]` 写回时也是跨步访问
+- `B[k * N + col]` 则更接近同地址重复读取
+
+这样的实现优点是代码直观、容易验证，而且非常适合作为后续 coalesced / tiled 版本的对照组；缺点也很明显：global memory 访存模式不友好，`A` 和 `B` 中的数据也会被大量重复读取，数据复用很差，因此整体仍然无法充分发挥 RTX 4060 的真实算力。
 
 ## Benchmark 版本说明
 
@@ -82,7 +90,11 @@ nvcc -O3 My_naive_kernel_benchmark.cu -o My_naive_kernel_benchmark
 - Compute capability: `8.9`
 - Global memory: `8.00 GiB`
 - SM count: `24`
+- Max threads per block: `1024`
+- Warmup: `10`
+- Iterations: `100`
 - 本次测试使用的 block size: `16 x 16`
+- CPU check: `enabled`, `max check dim = 2048`
 
 ## 实测结果
 
@@ -90,43 +102,54 @@ nvcc -O3 My_naive_kernel_benchmark.cu -o My_naive_kernel_benchmark
 
 | M | N | K | Block | Check | Min (ms) | Avg (ms) | Max (ms) | Avg GFLOPS | Best GFLOPS | Max Error | Note |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---:|---|
-| 256 | 256 | 256 | 16x16 | PASS | 0.3123 | 0.3234 | 0.3850 | 103.7455 | 107.4361 | 0.0000 | |
-| 512 | 512 | 512 | 16x16 | PASS | 2.2241 | 2.4632 | 2.8109 | 108.9805 | 120.6924 | 0.0000 | |
-| 1024 | 1024 | 1024 | 16x16 | PASS | 19.0136 | 20.4585 | 22.2915 | 104.9677 | 112.9444 | 0.0000 | |
-| 2048 | 2048 | 2048 | 16x16 | PASS | 158.8869 | 161.3996 | 163.8134 | 106.4431 | 108.1264 | 0.0000 | |
-| 4096 | 4096 | 4096 | 16x16 | SKIP | 1719.2428 | 1759.4509 | 1906.3910 | 78.1147 | 79.9416 | 0.0000 | CPU check skipped |
+| 256 | 256 | 256 | 16x16 | PASS | 0.1751 | 0.1830 | 0.2099 | 183.3508 | 191.6257 | 0.0000 | |
+| 512 | 512 | 512 | 16x16 | PASS | 1.1346 | 1.3963 | 2.0060 | 192.2429 | 236.5920 | 0.0000 | |
+| 1024 | 1024 | 1024 | 16x16 | PASS | 8.8422 | 9.3365 | 10.2922 | 230.0084 | 242.8665 | 0.0001 | |
+| 2048 | 2048 | 2048 | 16x16 | PASS | 70.4645 | 71.1545 | 77.6356 | 241.4446 | 243.8088 | 0.0002 | |
+| 4096 | 4096 | 4096 | 16x16 | SKIP | 560.2662 | 575.8431 | 699.9061 | 238.6743 | 245.3101 | 0.0000 | CPU check skipped |
+| 1023 | 1023 | 1023 | 16x16 | PASS | 3.0863 | 3.2389 | 3.7100 | 661.0822 | 693.7671 | 0.0001 | boundary case |
+| 4096 | 256 | 4096 | 16x16 | SKIP | 2.2906 | 2.5852 | 3.1436 | 3322.7325 | 3750.0415 | 0.0000 | CPU check skipped |
+| 256 | 4096 | 4096 | 16x16 | SKIP | 2.4812 | 2.5929 | 3.1119 | 3312.8442 | 3462.0750 | 0.0000 | CPU check skipped |
 
 ## 性能分析
 
 ### 1. Correctness
 
-对于 `256`、`512`、`1024` 和 `2048` 这几组 case，benchmark 输出都是 `PASS`，并且 `max error = 0.0000`。这说明这版 naive kernel 在当前测试范围内功能上是正确的，至少对这些单精度 float 的 square case 没有出现明显误差。
+对于 `256`、`512`、`1024`、`1023` 和 `2048` 这几组 case，benchmark 输出都是 `PASS`，`max error` 也都控制在 `1e-4` 量级。这说明这版 non-coalesced naive kernel 在当前测试范围内功能上是正确的，至少对这些单精度 float case 没有出现明显误差。
 
-`4096` 这组被标成 `SKIP`，不是因为 GPU 算错了，而是 benchmark 逻辑主动跳过了 CPU full-check。原因很简单：矩阵太大时，CPU 参考实现的代价会非常高，已经不适合继续作为常规 benchmark 的一部分。
+`4096` 和两组 rectangular case 被标成 `SKIP`，不是因为 GPU 算错了，而是 benchmark 逻辑主动跳过了 CPU full-check。原因很简单：矩阵太大时，CPU 参考实现的代价会非常高，已经不适合继续作为常规 benchmark 的一部分。
 
 ### 2. Scaling Behavior
 
-从 `256` 到 `2048`，整体吞吐基本稳定在 `104-109 GFLOPS` 左右。这个现象很关键，因为它说明了几件事：
+从 `256` 到 `2048`，square case 的吞吐基本稳定在 `183-241 GFLOPS` 左右，而且矩阵越大越接近一个比较稳定的平台期。这个现象说明了几件事：
 
 - 运行时间基本符合 `O(MNK)` 的增长趋势
 - 随着矩阵变大，launch overhead 不再是主导因素
-- kernel 性能进入了一个比较稳定的平台期
+- 当前 non-coalesced baseline 的 steady-state 表现大约落在 `230-240 GFLOPS`
 
-也就是说，这个 naive kernel 虽然不快，但它的表现是稳定、可解释的，不是“偶然跑快”或者“随机波动很大”的状态。
+也就是说，这个 naive kernel 虽然仍然很朴素，但它的表现已经是稳定、可解释的，不是“偶然跑快”或者“随机波动很大”的状态。
 
-### 3. 为什么 4096 会掉速
+### 3. 为什么这次 4096 没有像旧结果那样明显掉速
 
-在 `4096 x 4096 x 4096` 这个 case 上，吞吐下降到了大约 `78 GFLOPS`，明显低于前面的平台期。这个掉速非常符合 naive GEMM 的预期，主要原因包括：
+在这次结果里，`4096 x 4096 x 4096` 的平均吞吐仍然维持在大约 `239 GFLOPS`，和 `1024`、`2048` 非常接近，没有出现旧版 README 里那种明显掉到 `~78 GFLOPS` 的情况。这意味着原先 README 记录的那组数据已经不再代表当前代码。
 
-- kernel 会重复从 global memory 读取 `A` 和 `B`
-- 每个 thread 都要执行很长的标量累加循环
-- 没有通过 shared memory 做数据复用
-- 工作集变大后，cache reuse 会进一步变差
-- kernel 运行时间变长后，memory system 的压力会更明显
+从当前结果看，更合理的结论是：
 
-换句话说，矩阵一旦大到一定程度，global memory access pattern 的低效就会越来越突出，算术运算本身反而不是最主要的问题。
+- 这版 kernel 的 square-case 平台期比原先记录的更高
+- 当前 non-coalesced 映射虽然访存不友好，但并没有在 `4096` 这一档立刻出现断崖式掉速
+- 因此后续做 coalesced kernel 时，应该拿这组 `~230-240 GFLOPS` 的数据作为新的 naive baseline，而不是继续沿用旧结果
 
-### 4. 这个结果说明了什么
+### 4. Boundary case 和 rectangular case 要怎么理解
+
+`1023 x 1023 x 1023` 这组结果的平均吞吐达到了 `661 GFLOPS`，两组 rectangular case 甚至都超过了 `3.3 TFLOPS`。这些结果说明当前 kernel 对 shape 非常敏感，因此：
+
+- square case 更适合作为后续优化前后的主 baseline
+- boundary case 和 rectangular case 更适合作为补充观察，帮助看 shape sensitivity
+- 这几组高吞吐结果不应该简单拿来和 square case 直接横向比较
+
+换句话说，这份 benchmark 现在不仅是在测一个“慢的 naive kernel”，也开始暴露这个 kernel 在不同 shape 下的行为差异。
+
+### 5. 这个结果说明了什么
 
 这版实现已经是一个合格的学习型 baseline：
 
@@ -137,14 +160,14 @@ nvcc -O3 My_naive_kernel_benchmark.cu -o My_naive_kernel_benchmark
 
 但它也非常典型地暴露了 naive GEMM 的上限：
 
-- arithmetic intensity 不高
+- 当前版本仍然没有 coalesced global-memory access
 - global memory fetch 重复很多
 - 数据复用差
-- 没有利用现代 GPU memory hierarchy
+- 没有利用 shared memory 和更深层的 memory hierarchy
 
-对 RTX 4060 Laptop GPU 来说，`~100 GFLOPS` 左右作为 naive baseline 是合理的，但和真正经过优化的 GEMM kernel 相比，差距会非常大。
+对 RTX 4060 Laptop GPU 来说，当前这版 non-coalesced naive baseline 更接近 `~230-240 GFLOPS` 的 square-case 平台，而不是旧 README 里写的 `~100 GFLOPS`。后续如果引入 coalescing、shared memory tiling、vectorized access，这个 baseline 仍然有很大的提升空间。
 
-### 5. 当前测速质量如何
+### 6. 当前测速质量如何
 
 这份 benchmark 测的是 pure kernel time，而不是端到端时间，这一点很重要：
 
@@ -184,12 +207,12 @@ nvcc -O3 My_naive_kernel_benchmark.cu -o My_naive_kernel_benchmark
 
 - 一个 correctness-first 的 naive kernel
 - 一个 benchmark-oriented 的测速程序
-- 一组在 RTX 4060 Laptop GPU 上得到的真实 baseline 数据
+- 一组在 RTX 4060 Laptop GPU 上得到的真实 non-coalesced baseline 数据
 
 从当前结果看，结论很明确：
 
 - kernel 是正确的
-- 在中等规模上性能比较稳定
-- 性能瓶颈非常符合 naive global-memory GEMM 的典型特征
+- square case 在 `~230-240 GFLOPS` 附近比较稳定
+- 当前代码和旧 README 已经不是同一版 baseline，后续对比应以这组新数据为准
 
 后续如果引入 shared memory tiling、better block mapping、cuBLAS baseline，这个项目的分析深度和展示效果都会再上一个台阶。

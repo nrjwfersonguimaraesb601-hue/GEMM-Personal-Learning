@@ -64,8 +64,8 @@ __global__ void calculate_Matrix(int M, int N, int K, const float *A, const floa
     // - threadIdx.y / blockIdx.y -> 输出矩阵的列 col
     //
     // 也就是说，warp 内线程主要沿着行方向展开，而不是沿着列方向展开。
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
 
     float sum = 0;
     if (row < M && col < N)
