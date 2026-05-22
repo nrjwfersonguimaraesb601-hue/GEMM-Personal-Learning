@@ -41,6 +41,7 @@
 - 为 naive kernel 写了一个 benchmark 版本
 - 在 RTX 4060 Laptop GPU 上跑出了一组刻意保留 non-coalesced 访问方式的 baseline 数据
 - [Global_Memory_Coalescing_kernel](./Global_Memory_Coalescing_kernel/README.md)：完成了第一步 global memory coalescing 优化，并记录了相对 naive 的提升
+- [SMEM_kernel](./SMEM_kernel/README.md)：完成了第一版 shared-memory caching / tiling，实现了 block 内 tile 复用，并整理了相对前两版的 benchmark 结果
 - 用 [TODO.md](./TODO.md) 维护后续优化路线
 
 换句话说，我现在还处在“先把 baseline 做扎实”的阶段。
@@ -53,7 +54,7 @@
 2. 分析 block size 对性能的影响
 3. 引入 global memory coalescing 优化
 4. 引入 shared memory tiling
-5. 尝试 register blocking / block tiling
+5. 在 shared memory 基础上尝试 register blocking / block tiling
 6. 补充 vectorized load/store
 7. 加入 cuBLAS baseline 做对比
 8. 对不同版本做系统化性能分析
@@ -72,6 +73,7 @@
 
 - `naive_kernel/`: 最基础的一版 CUDA GEMM 实现，以及对应的 benchmark 和性能分析文档
 - `Global_Memory_Coalescing_kernel/`: 第一版 coalesced global-memory 访问优化，以及对应 benchmark
+- `SMEM_kernel/`: 第一版 shared-memory caching / tiling 实现，以及对应 benchmark、teacher notes 和性能分析文档
 - `TODO.md`: 按 worklog 路线维护后续优化任务
 
 后面如果我继续推进优化版本，预计会逐渐补充更多子目录，比如：

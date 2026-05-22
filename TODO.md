@@ -13,22 +13,21 @@
 - [x] `naive_kernel` README 与实测数据整理
 - [x] `Global_Memory_Coalescing_kernel` 实现
 - [x] `Global_Memory_Coalescing_kernel` benchmark 与 README 整理
+- [x] `SMEM_kernel` shared-memory caching / tiling 实现
+- [x] `SMEM_kernel` benchmark 与 README 整理
+- [x] `SMEM_kernel` teacher snippet 逐行讲解整理
 
 ## 下一步
 
 - [ ] 系统比较 block size
   - [ ] 跑 `16x16`、`32x8`、`32x16`、`8x32`
+  - [ ] 把 `32x32` 也纳入 shared-memory 版本的对比
   - [ ] 记录 square case 和 rectangular case 的差异
   - [ ] 固化一版默认配置
 
-- [ ] `Shared_Memory_Caching_kernel`
-  - [ ] 引入 shared memory tile
-  - [ ] 降低 A/B 的重复 global memory 读取
-  - [ ] 补 benchmark
-  - [ ] 写简短 README，重点记录相对 coalescing 版的提升
-
 - [ ] `1D_BlockTiling_kernel`
   - [ ] 让一个 thread 计算多个输出值
+  - [ ] 在 shared-memory 版本基础上继续放大数据复用
   - [ ] 观察寄存器使用和吞吐变化
   - [ ] 和 shared memory 版本对比
 
@@ -58,11 +57,13 @@
 
 每做完一个 kernel 版本，至少补齐下面这些内容：
 
-- [ ] correctness check 通过
-- [ ] benchmark 可复现
-- [ ] README 记录核心改动
-- [ ] README 记录相对上一版的性能提升
-- [ ] 至少保留一组 RTX 4060 Laptop GPU 的实测数据
+- [x] correctness check 通过
+- [x] benchmark 可复现
+- [x] README 记录核心改动
+- [x] README 记录相对上一版的性能提升
+- [x] 至少保留一组 RTX 4060 Laptop GPU 的实测数据
+
+下一版开始时，重新按该 checklist 检查新的 kernel 目录。
 
 ## 可选补充
 
