@@ -11,11 +11,15 @@
 - [x] `naive_kernel` 基线实现
 - [x] `naive_kernel` benchmark 固化
 - [x] `naive_kernel` README 与实测数据整理
+- [x] `naive_kernel` Nsight Compute 截图归档与解读
 - [x] `Global_Memory_Coalescing_kernel` 实现
 - [x] `Global_Memory_Coalescing_kernel` benchmark 与 README 整理
+- [x] `Global_Memory_Coalescing_kernel` Nsight Compute 截图归档与解读
 - [x] `SMEM_kernel` shared-memory caching / tiling 实现
 - [x] `SMEM_kernel` benchmark 与 README 整理
 - [x] `SMEM_kernel` teacher snippet 逐行讲解整理
+- [x] `SMEM_kernel` Nsight Compute 截图归档与解读
+- [x] 三个 kernel 的 profiling 目录规范统一
 
 ## 下一步
 
@@ -69,6 +73,8 @@
 
 - [ ] 加 occupancy 分析
 - [ ] 加 memory bandwidth 分析
+- [ ] 给 `SMEM_kernel` 补 `occupancy` 和 `shared_memory` 专门截图
+- [ ] 做一份三版 kernel 的 profiling 对照总表
 - [ ] 画 `GFLOPS vs size` 曲线
 - [ ] 画 `runtime vs size` 曲线
 - [ ] 补更多非方阵 case

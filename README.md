@@ -42,6 +42,7 @@
 - 在 RTX 4060 Laptop GPU 上跑出了一组刻意保留 non-coalesced 访问方式的 baseline 数据
 - [Global_Memory_Coalescing_kernel](./Global_Memory_Coalescing_kernel/README.md)：完成了第一步 global memory coalescing 优化，并记录了相对 naive 的提升
 - [SMEM_kernel](./SMEM_kernel/README.md)：完成了第一版 shared-memory caching / tiling，实现了 block 内 tile 复用，并整理了相对前两版的 benchmark 结果
+- 为这三个版本分别补齐了 Nsight Compute 截图归档和逐图解读
 - 用 [TODO.md](./TODO.md) 维护后续优化路线
 
 换句话说，我现在还处在“先把 baseline 做扎实”的阶段。
@@ -74,6 +75,8 @@
 - `naive_kernel/`: 最基础的一版 CUDA GEMM 实现，以及对应的 benchmark 和性能分析文档
 - `Global_Memory_Coalescing_kernel/`: 第一版 coalesced global-memory 访问优化，以及对应 benchmark
 - `SMEM_kernel/`: 第一版 shared-memory caching / tiling 实现，以及对应 benchmark、teacher notes 和性能分析文档
+- `naive_kernel/profiling/`、`Global_Memory_Coalescing_kernel/profiling/`、`SMEM_kernel/profiling/`: 每一版 Nsight Compute 截图、命令模板和逐图解读
+- `NSIGHT_COMPUTE_PROFILING_GUIDE.md`: 当前项目使用 Nsight Compute 的最小流程记录
 - `TODO.md`: 按 worklog 路线维护后续优化任务
 
 后面如果我继续推进优化版本，预计会逐渐补充更多子目录，比如：
@@ -94,6 +97,14 @@
 - 每一种优化到底解决了什么问题
 - 优化后性能提升了多少
 - 和 cuBLAS 还有多少差距
+
+现在这套 profiling 资料开始让这些问题更具体了，例如：
+
+- naive 版主要是 non-coalesced global access，把 memory throughput 顶到接近满值，但 compute throughput 只有大约 `11.91%`
+- coalesced 版把每个 sector 的有效利用从大约 `4 / 32 bytes` 提高到 `26.4 / 32 bytes`，并把 compute / memory throughput 一起推到接近 `97.82%`
+- SMEM 版把主要指令成分从 `LDG` 推向了 `LDS`，说明数据复用已经进入 shared memory，但同时也引入了 `MIO throttle`、occupancy 限制和 shared store bank conflict
+
+对我来说，这些图的价值不只是“好看”，而是能把每一步优化到底改变了什么讲得更清楚。
 
 如果以后我回头看这个仓库，我希望我能看到的不只是代码本身，而是自己当时是怎么理解、怎么试、怎么改、怎么验证的。
 

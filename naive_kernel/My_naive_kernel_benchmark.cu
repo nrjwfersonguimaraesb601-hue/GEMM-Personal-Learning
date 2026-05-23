@@ -291,8 +291,8 @@ BenchmarkResult runCase(const BenchmarkConfig &cfg, int M, int N, int K)
     // Execution configuration.
     // ceil division guarantees enough blocks to cover the full output matrix.
     dim3 blockDim(cfg.bx, cfg.by);
-    dim3 gridDim((N + blockDim.x - 1) / blockDim.x,
-                 (M + blockDim.y - 1) / blockDim.y);
+    dim3 gridDim((M + blockDim.x - 1) / blockDim.x,
+                 (N + blockDim.y - 1) / blockDim.y);
 
     // Warmup phase:
     // 执行若干次不计时 kernel，减少首次启动成本对 benchmark 的污染。
