@@ -1,88 +1,98 @@
 # Performance Summary
 
-这份文件把各个版本的 benchmark 结果放到一个地方，方便横向对比。
+这份文件把当前四个版本放在一起，方便横向对比。
+
+## Benchmark 口径
+
+- GPU: `NVIDIA GeForce RTX 4060 Laptop GPU`
+- Warmup: `10`
+- Iterations: `50`
+- CPU check: `disabled`
+- 表格为 pure kernel time
 
 ## 总览
 
-| Version | Main Change | Best Square Avg GFLOPS | Representative Square Range | Notes |
-|---|---|---:|---|---|
-| `naive_kernel` | non-coalesced baseline | 241.4446 | `~183-241 GFLOPS` | 作为最原始对照组 |
-| `Global_Memory_Coalescing_kernel` | coalesced global-memory access | 1020.5712 | `~843-1021 GFLOPS` | square case 提升最明显 |
-| `SMEM_kernel` | shared-memory tile caching | 1042.0211 | `~650-1042 GFLOPS` | 相对 naive 提升明显，但相对 coalesced 基本同档 |
+| Version | Main Change | Representative Square Range | Best Square Avg GFLOPS |
+|---|---|---|---:|
+| `naive_kernel` | non-coalesced baseline | `~92-123 GFLOPS` | 123.5758 |
+| `Global_Memory_Coalescing_kernel` | coalesced global-memory access | `~616-1026 GFLOPS` | 1026.0384 |
+| `SMEM_kernel` | shared-memory tile reuse | `~641-1039 GFLOPS` | 1039.4091 |
+| `1D_Blocktiling_kernel` | register blocking + 1D block tiling | `~1259-3698 GFLOPS` | 3698.2388 |
 
 ## Square Case Comparison
 
-| Case | Naive Avg GFLOPS | Coalesced Avg GFLOPS | SMEM Avg GFLOPS | Coalesced vs Naive | SMEM vs Naive | SMEM vs Coalesced |
-|---|---:|---:|---:|---:|---:|---:|
-| 256 x 256 x 256 | 183.3508 | 442.9100 | 650.0541 | 2.42x | 3.55x | 1.47x |
-| 512 x 512 x 512 | 192.2429 | 843.4147 | 846.8679 | 4.39x | 4.41x | 1.00x |
-| 1024 x 1024 x 1024 | 230.0084 | 884.2309 | 841.2554 | 3.84x | 3.66x | 0.95x |
-| 2048 x 2048 x 2048 | 241.4446 | 1020.5712 | 1042.0211 | 4.23x | 4.32x | 1.02x |
-| 4096 x 4096 x 4096 | 238.6743 | 975.3294 | 948.9473 | 4.09x | 3.98x | 0.97x |
+```text
+Square Case Avg GFLOPS
 
-## Quick Notes
+Case             Naive      Coalesced      SMEM      1D Blocktiling
+256 x 256 x 256   92.2776     616.2947   640.7902        1258.8250
+512 x 512 x 512  109.5825     830.3416   836.6070        2676.5946
+1024 x 1024 x 1024
+                 123.4315     886.0027   904.6960        3397.1641
+2048 x 2048 x 2048
+                 123.5758    1026.0384  1039.4091        3698.2388
+4096 x 4096 x 4096
+                 123.0080     870.8718   958.3544        3659.7348
+```
 
-- 常见 square case 下，coalescing 版本相对 naive 提升大约 `2.4x ~ 4.4x`
-- `SMEM_kernel` 相对 naive 同样提升明显，但在你这台 RTX 4060 Laptop GPU 上并没有稳定压过 coalesced 版本
-- `1024` 到 `4096` 这一段，coalescing 和 SMEM 两版都大致落在 `~840-1040 GFLOPS`
-- 这说明 shared memory 这一步已经走通，但后续仍然需要更深的 tiling / register reuse 才可能把优势进一步拉开
+## Speedup Over Naive
 
-## Test Setup
+```text
+Speedup Over Naive
 
-- GPU: `NVIDIA GeForce RTX 4060 Laptop GPU`
-- Compute capability: `8.9`
-- Global memory: `8.00 GiB`
-- SM count: `24`
-- Max threads per block: `1024`
-- Warmup: `10`
-- Iterations: `100`
-- CPU check: `enabled`, `max check dim = 2048`
-- `naive_kernel` / `Global_Memory_Coalescing_kernel` block: `16 x 16`
-- `SMEM_kernel` block: `32 x 32`
+Case             Coalesced/Naive   SMEM/Naive   1D Blocktiling/Naive
+256 x 256 x 256        6.68x          6.94x              13.64x
+512 x 512 x 512        7.58x          7.63x              24.42x
+1024 x 1024 x 1024
+                       7.18x          7.33x              27.52x
+2048 x 2048 x 2048
+                       8.30x          8.41x              29.93x
+4096 x 4096 x 4096
+                       7.08x          7.79x              29.75x
+```
 
-## Detailed Data
+## SMEM vs Coalesced
 
-### naive_kernel
+```text
+SMEM vs Coalesced
 
-| M | N | K | Avg ms | Avg GFLOPS | Best GFLOPS | Check | Note |
-|---|---|---|---:|---:|---:|---|---|
-| 256 | 256 | 256 | 0.1830 | 183.3508 | 191.6257 | PASS | |
-| 512 | 512 | 512 | 1.3963 | 192.2429 | 236.5920 | PASS | |
-| 1024 | 1024 | 1024 | 9.3365 | 230.0084 | 242.8665 | PASS | |
-| 2048 | 2048 | 2048 | 71.1545 | 241.4446 | 243.8088 | PASS | |
-| 4096 | 4096 | 4096 | 575.8431 | 238.6743 | 245.3101 | SKIP | CPU check skipped |
-| 1023 | 1023 | 1023 | 3.2389 | 661.0822 | 693.7671 | PASS | boundary case |
-| 4096 | 256 | 4096 | 2.5852 | 3322.7325 | 3750.0415 | SKIP | CPU check skipped |
-| 256 | 4096 | 4096 | 2.5929 | 3312.8442 | 3462.0750 | SKIP | CPU check skipped |
+Case             Coalesced GFLOPS   SMEM GFLOPS   SMEM/Coalesced
+256 x 256 x 256       616.2947       640.7902          1.04x
+512 x 512 x 512       830.3416       836.6070          1.01x
+1024 x 1024 x 1024
+                      886.0027       904.6960          1.02x
+2048 x 2048 x 2048
+                     1026.0384      1039.4091          1.01x
+4096 x 4096 x 4096
+                      870.8718       958.3544          1.10x
+```
 
-### Global_Memory_Coalescing_kernel
+## 1D Blocktiling vs SMEM
 
-| M | N | K | Avg ms | Avg GFLOPS | Best GFLOPS | Check | Note |
-|---|---|---|---:|---:|---:|---|---|
-| 256 | 256 | 256 | 0.0758 | 442.9100 | 762.0465 | PASS | |
-| 512 | 512 | 512 | 0.3183 | 843.4147 | 870.9103 | PASS | |
-| 1024 | 1024 | 1024 | 2.4286 | 884.2309 | 1022.0972 | PASS | |
-| 2048 | 2048 | 2048 | 16.8336 | 1020.5712 | 1034.2261 | PASS | |
-| 4096 | 4096 | 4096 | 140.9154 | 975.3294 | 995.8287 | SKIP | CPU check skipped |
-| 1023 | 1023 | 1023 | 2.1741 | 984.8579 | 1027.5095 | PASS | |
-| 4096 | 256 | 4096 | 9.0087 | 953.5179 | 1031.9440 | SKIP | CPU check skipped |
-| 256 | 4096 | 4096 | 9.3156 | 922.1050 | 990.7671 | SKIP | CPU check skipped |
+```text
+1D Blocktiling vs SMEM
 
-### SMEM_kernel
+Case             SMEM GFLOPS   1D Blocktiling GFLOPS   1D/SMEM
+256 x 256 x 256    640.7902          1258.8250          1.96x
+512 x 512 x 512    836.6070          2676.5946          3.20x
+1024 x 1024 x 1024
+                   904.6960          3397.1641          3.75x
+2048 x 2048 x 2048
+                  1039.4091          3698.2388          3.56x
+4096 x 4096 x 4096
+                   958.3544          3659.7348          3.82x
+```
 
-| M | N | K | Avg ms | Avg GFLOPS | Best GFLOPS | Check | Note |
-|---|---|---|---:|---:|---:|---|---|
-| 256 | 256 | 256 | 0.0516 | 650.0541 | 744.7273 | PASS | |
-| 512 | 512 | 512 | 0.3170 | 846.8679 | 870.9103 | PASS | |
-| 1024 | 1024 | 1024 | 2.5527 | 841.2554 | 1048.0519 | PASS | |
-| 2048 | 2048 | 2048 | 16.4871 | 1042.0211 | 1051.4160 | PASS | |
-| 4096 | 4096 | 4096 | 144.8331 | 948.9473 | 977.5359 | SKIP | CPU check skipped |
-| 1023 | 1023 | 1023 | 2.1747 | 984.6031 | 1040.3055 | PASS | |
-| 4096 | 256 | 4096 | 9.7429 | 881.6572 | 962.6621 | SKIP | CPU check skipped |
-| 256 | 4096 | 4096 | 9.5496 | 899.5054 | 969.4556 | SKIP | CPU check skipped |
+## 简短结论
+
+- `naive` 现在可以稳定看成 `~123 GFLOPS` baseline
+- `coalesced` 是第一波最明显的收益来源，直接把 square case 推到 `~0.6-1.0 TFLOPS`
+- `SMEM` 在这次新数据里已经整体略强于 `coalesced`
+- `1D blocktiling` 是当前项目里最强的一版，已经把主力 square case 推到 `3 TFLOPS+`
 
 ## Source
 
 - [naive_kernel/README.md](./naive_kernel/README.md)
 - [Global_Memory_Coalescing_kernel/README.md](./Global_Memory_Coalescing_kernel/README.md)
 - [SMEM_kernel/README.md](./SMEM_kernel/README.md)
+- [1D_Blocktiling_kernel/README.md](./1D_Blocktiling_kernel/README.md)
