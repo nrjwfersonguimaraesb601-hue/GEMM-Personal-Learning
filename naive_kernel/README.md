@@ -1,55 +1,36 @@
-# Naive CUDA GEMM
+# Naive Kernel
 
-这个目录保留的是最原始的 baseline。
+## Idea
 
-它的定位很明确：
+这是整个项目的 baseline。
 
-- 一个 thread 计算一个输出元素
-- 不做 shared memory
-- 不做 register blocking
-- 保留当前这版 non-coalesced 的线程映射
+这一版保持最基础的 SGEMM 写法：
 
-这版最大的价值不是快，而是给后面的 coalescing、SMEM、block tiling 提供一个稳定对照组。
+- 一个 CUDA thread 计算一个 `C[row][col]`
+- 每个 thread 直接从 global memory 读取 `A[row][k]` 和 `B[k][col]`
+- 不使用 shared memory
+- 不做 register tiling
+- 保留 non-coalesced 的访问特征，方便后续版本对比
 
-## 文件说明
+它的目标不是快，而是提供一个稳定、容易验证的起点。
 
-- `My_naive_kernel.cu`: correctness-first 版本
-- `My_naive_kernel_benchmark.cu`: benchmark 版本
-
-## 编译
+## Build
 
 ```bash
-nvcc -O3 My_naive_kernel.cu -o My_naive_kernel
-nvcc -O3 My_naive_kernel_benchmark.cu -o My_naive_kernel_benchmark
+nvcc My_naive_kernel.cu -O3 -o My_naive_kernel
+nvcc My_naive_kernel_benchmark.cu -O3 -lineinfo -o naive_bench
 ```
 
-## 使用方式
+## Run Benchmark
 
 ```bash
-./My_naive_kernel
-./My_naive_kernel_benchmark
-./My_naive_kernel_benchmark 1024 1024 1024
-./My_naive_kernel_benchmark 4096 4096 4096 --no-check
+./naive_bench \
+  --warmup 10 --iters 50 --bx 32 --by 32 --no-check
 ```
 
-## 这次 benchmark 设置
+当前性能表使用 `--no-check`，主要用于 benchmark 性能记录。正确性需要单独去掉 `--no-check` 开启 CPU check，或运行 correctness-first 版本。
 
-- GPU: `NVIDIA GeForce RTX 4060 Laptop GPU`
-- Compute capability: `8.9`
-- Global memory: `8.00 GiB`
-- SM count: `24`
-- Max threads per block: `1024`
-- Warmup: `10`
-- Iterations: `50`
-- Block: `32 x 32`
-- CPU check: `disabled`
-
-说明：
-
-- 下面这组数据是纯测速结果，所以 `check` 都是 `SKIP`
-- correctness 还是由单独的 correctness 版本负责确认
-
-## 实测结果
+## Benchmark Result
 
 | M | N | K | Block | Avg (ms) | Avg GFLOPS | Best GFLOPS |
 |---|---|---|---|---:|---:|---:|
@@ -62,24 +43,19 @@ nvcc -O3 My_naive_kernel_benchmark.cu -o My_naive_kernel_benchmark
 | 4096 | 256 | 4096 | 32x32 | 73.7055 | 116.5439 | 123.7789 |
 | 256 | 4096 | 4096 | 32x32 | 69.4507 | 123.6838 | 124.1653 |
 
-## 这组结果怎么看
+## What This Stage Shows
 
-- 常见 square case 已经很稳定，基本落在 `~92-123 GFLOPS`
-- 从 `1024` 往后看，square case 平台期大致就在 `~123 GFLOPS`
-- 这说明这版 baseline 已经够稳定，适合拿来做后续 speedup 对照
+- `1024^3` 之后的 square case 基本稳定在 `~123 GFLOPS`
+- 这说明 baseline 足够稳定，可以作为后续优化的对照
+- `1023^3` 的吞吐明显更高，更适合作为 shape-sensitive 观察，不作为主 baseline 结论
 
-经验上看，这组数据也很符合 naive kernel 的定位：
+## Known Issues / Notes
 
-- 实现简单
-- 正确性容易验证
-- 性能不高，但趋势很清楚
+- global memory 访问没有优化，warp 内访存不够合并
+- 没有 shared memory reuse
+- 没有 register blocking
+- 这是故意保留的低性能 baseline，不应该继续复杂化
 
-`1023` 和两组 rectangular case 看起来更快，不要把它们当作 square case 的主结论。对我来说，这几组更适合当补充观察，用来提醒自己 shape 会影响吞吐表现。
+## Next Step
 
-## 当前结论
-
-这版 naive kernel 现在可以作为项目里的 baseline：
-
-- square baseline 大约是 `~123 GFLOPS`
-- 后面所有优化版都应该和它做对比
-- 它不是项目重点，但它是后面所有结论的起点
+下一阶段是 `Global Memory Coalescing`：先不改变算法结构，只调整 thread mapping，让 global memory access 更连续。

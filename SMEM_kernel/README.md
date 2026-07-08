@@ -1,43 +1,35 @@
-# Shared Memory Kernel
+# Shared Memory Tiling Kernel
 
-这一版是在 coalesced kernel 的基础上继续往前走的一步：
+## Idea
 
-- 先把 `A` 和 `B` 的 tile 搬进 shared memory
-- 再让 block 内线程重复使用这份 tile
+这一版在 global memory coalescing 的基础上加入 shared memory tiling。
 
-对我来说，这版最大的意义不是“概念上用了 shared memory”，而是它已经在当前机器上带来了比较稳定的额外收益。
+核心思路：
 
-## 文件说明
+- 一个 block 负责 C 的一个 tile
+- 把对应的 A tile 和 B tile 先加载到 shared memory
+- block 内线程重复使用 shared memory 中的数据
+- 减少重复 global memory load
 
-- `My_SMEM_kernel.cu`: correctness-first 版本
-- `My_SMEM_kernel_benchmark.cu`: benchmark 版本
-- `teacher.md`: 参考代码解释
+这一阶段的重点不是改变每个 thread 的计算数量，而是观察 shared memory reuse 对 GEMM 的影响。
 
-## 编译
-
-```bash
-nvcc -O3 My_SMEM_kernel.cu -o My_SMEM_kernel
-nvcc -O3 My_SMEM_kernel_benchmark.cu -o My_SMEM_kernel_benchmark
-```
-
-## 使用方式
+## Build
 
 ```bash
-./My_SMEM_kernel
-./My_SMEM_kernel_benchmark
-./My_SMEM_kernel_benchmark 1024 1024 1024
-./My_SMEM_kernel_benchmark 4096 4096 4096 --no-check
+nvcc My_SMEM_kernel.cu -O3 -o My_SMEM_kernel
+nvcc My_SMEM_kernel_benchmark.cu -O3 -lineinfo -o smem_bench
 ```
 
-## 这次 benchmark 设置
+## Run Benchmark
 
-- GPU: `NVIDIA GeForce RTX 4060 Laptop GPU`
-- Warmup: `10`
-- Iterations: `50`
-- Block: `32 x 32`
-- CPU check: `disabled`
+```bash
+./smem_bench \
+  --warmup 10 --iters 50 --bx 32 --by 32 --no-check
+```
 
-## 实测结果
+当前性能表使用 `--no-check`，主要用于 benchmark 性能记录。正确性需要单独去掉 `--no-check` 开启 CPU check。
+
+## Benchmark Result
 
 | M | N | K | Block | Avg (ms) | Avg GFLOPS | Best GFLOPS |
 |---|---|---|---|---:|---:|---:|
@@ -50,32 +42,29 @@ nvcc -O3 My_SMEM_kernel_benchmark.cu -o My_SMEM_kernel_benchmark
 | 4096 | 256 | 4096 | 32x32 | 9.1191 | 941.9762 | 978.2633 |
 | 256 | 4096 | 4096 | 32x32 | 9.1756 | 936.1697 | 965.5396 |
 
-## 相对前两版
+## Compared with Global Memory Coalescing
 
-| Case | Naive | Coalesced | SMEM |
+| Case | Coalesced Avg GFLOPS | SMEM Avg GFLOPS | Change |
 |---|---:|---:|---:|
-| 256 x 256 x 256 | 92.2776 | 616.2947 | 640.7902 |
-| 512 x 512 x 512 | 109.5825 | 830.3416 | 836.6070 |
-| 1024 x 1024 x 1024 | 123.4315 | 886.0027 | 904.6960 |
-| 2048 x 2048 x 2048 | 123.5758 | 1026.0384 | 1039.4091 |
-| 4096 x 4096 x 4096 | 123.0080 | 870.8718 | 958.3544 |
+| 256^3 | 616.2947 | 640.7902 | +4.0% |
+| 512^3 | 830.3416 | 836.6070 | +0.8% |
+| 1024^3 | 886.0027 | 904.6960 | +2.1% |
+| 2048^3 | 1026.0384 | 1039.4091 | +1.3% |
+| 4096^3 | 870.8718 | 958.3544 | +10.0% |
 
-## 这组结果怎么看
+## What This Stage Shows
 
-- 相对 naive，提升仍然非常大
-- 相对 coalesced，这次已经不是“基本打平”，而是多数 square case 都有小幅领先
-- `4096` 这档从 `870.8718` 提到 `958.3544 GFLOPS`，这次 shared memory 的收益就更明确了
+- shared memory tiling 在当前实现中带来稳定但不夸张的提升
+- 多数 square case 相对 coalesced 有小幅领先
+- `4096^3` 从 `870.8718 GFLOPS` 提升到 `958.3544 GFLOPS`
+- shared memory reuse 是后续 block tiling / register tiling 的基础
 
-但经验上也不用把这版想得太神：
+## Known Issues / Notes
 
-- 它不是一下子跳到一个完全不同的数量级
-- 它更像是在 coalesced 基础上继续往上推了一截
-- 说明 shared memory 这一步已经值得保留，但后面还需要更深的 tiling / register reuse 才能继续拉开差距
+- 每个 thread 仍然只计算一个输出元素
+- shared memory tile 已经复用，但寄存器级复用还不够
+- 相比 coalesced 的提升没有跨数量级，说明后续需要更深的 register blocking
 
-## 当前结论
+## Next Step
 
-这版现在的定位我会这样记：
-
-- 它已经是一个比较成熟的 `~0.9-1.0 TFLOPS` 档学习版本
-- 在这台 RTX 4060 Laptop GPU 上，已经整体强于当前 coalesced 版
-- 它很适合作为后续 block tiling 和 register blocking 的起点
+下一阶段是 `1D Register Tiling`：让每个 thread 在寄存器里累加多个输出，进一步提高数据复用。

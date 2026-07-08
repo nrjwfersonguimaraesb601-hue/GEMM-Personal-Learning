@@ -1,39 +1,30 @@
 # Global Memory Coalescing Kernel
 
-这一版是在 naive baseline 上做的第一步有效优化。
+## Idea
 
-核心变化很简单：
+这一版是在 naive baseline 上做的第一步优化。
 
-- 把线程映射改成更利于 global memory 合并访问的方式
-- 让 warp 内线程更自然地沿列方向展开
-- 不改算法本质，只先把访问模式理顺
+核心变化是调整 thread mapping，让 warp 内线程更自然地访问连续的 global memory 地址。算法本身仍然是一个 thread 计算一个输出元素，不使用 shared memory，也不做 register tiling。
 
-这版的意义很直接：它告诉我，哪怕只是先把 global memory access 调整对，收益也已经很大。
+这一阶段主要用来观察：仅仅把 global memory access pattern 调整好，可以带来多大的提升。
 
-## 编译
+## Build
 
 ```bash
-nvcc -O3 My_Global_Memory_Coalescing_kernel.cu -o gmemc
-nvcc -O3 My_Global_Memory_Coalescing_kernel_benchmarker.cu -o gmemc_bench
+nvcc My_Global_Memory_Coalescing_kernel.cu -O3 -o gmemc
+nvcc My_Global_Memory_Coalescing_kernel_benchmarker.cu -O3 -lineinfo -o gmemc_bench
 ```
 
-## 使用方式
+## Run Benchmark
 
 ```bash
-./gmemc_bench
-./gmemc_bench 1024 1024 1024
-./gmemc_bench 4096 4096 4096 --no-check
+./gmemc_bench \
+  --warmup 10 --iters 50 --bx 32 --by 32 --no-check
 ```
 
-## 这次 benchmark 设置
+当前性能表使用 `--no-check`，主要用于 benchmark 性能记录。正确性需要单独去掉 `--no-check` 开启 CPU check。
 
-- GPU: `NVIDIA GeForce RTX 4060 Laptop GPU`
-- Warmup: `10`
-- Iterations: `50`
-- Block: `32 x 32`
-- CPU check: `disabled`
-
-## 实测结果
+## Benchmark Result
 
 | M | N | K | Block | Avg (ms) | Avg GFLOPS | Best GFLOPS |
 |---|---|---|---|---:|---:|---:|
@@ -46,30 +37,29 @@ nvcc -O3 My_Global_Memory_Coalescing_kernel_benchmarker.cu -o gmemc_bench
 | 4096 | 256 | 4096 | 32x32 | 8.4779 | 1013.2102 | 1021.0437 |
 | 256 | 4096 | 4096 | 32x32 | 9.7675 | 879.4382 | 884.9676 |
 
-## 相对 naive 的提升
+## Compared with Naive
 
-| Case | Naive Avg GFLOPS | Coalesced Avg GFLOPS | Speedup |
+| Case | Naive Avg GFLOPS | Coalesced Avg GFLOPS | Change |
 |---|---:|---:|---:|
-| 256 x 256 x 256 | 92.2776 | 616.2947 | 6.68x |
-| 512 x 512 x 512 | 109.5825 | 830.3416 | 7.58x |
-| 1024 x 1024 x 1024 | 123.4315 | 886.0027 | 7.18x |
-| 2048 x 2048 x 2048 | 123.5758 | 1026.0384 | 8.30x |
-| 4096 x 4096 x 4096 | 123.0080 | 870.8718 | 7.08x |
+| 256^3 | 92.2776 | 616.2947 | +567.9% |
+| 512^3 | 109.5825 | 830.3416 | +657.7% |
+| 1024^3 | 123.4315 | 886.0027 | +617.8% |
+| 2048^3 | 123.5758 | 1026.0384 | +730.3% |
+| 4096^3 | 123.0080 | 870.8718 | +608.0% |
 
-## 这组结果怎么看
+## What This Stage Shows
 
-- 这一步优化是非常值的，square case 直接从 `~123 GFLOPS` 提到 `~616-1026 GFLOPS`
-- `2048` 这一档已经稳定站上 `1 TFLOPS`
-- 说明当前项目里，第一波最大的收益确实来自把 global memory access 做得更合理
+- global memory coalescing 是第一波最明显的收益来源
+- square case 从 naive 的 `~123 GFLOPS` 提升到 `~616-1026 GFLOPS`
+- `2048^3` 已经超过 `1 TFLOPS`
+- 这一步说明“先把访存方向改对”非常重要
 
-经验上看，这版最该记住的不是某一个单点数字，而是这条经验：
+## Known Issues / Notes
 
-- “先把访存方向改对” 的收益，往往比很多后面更复杂的技巧还更直接
+- 仍然没有 shared memory tile reuse
+- 每个 thread 仍然只计算一个输出
+- 后续性能继续提升需要 shared memory tiling 和 register blocking
 
-## 当前结论
+## Next Step
 
-这版已经是一个很扎实的中间 checkpoint：
-
-- 比 naive 明显快很多
-- 结构上仍然简单
-- 很适合作为 SMEM 版之前的参照
+下一阶段是 `Shared Memory Tiling`：把 `A` / `B` 的 tile 搬到 shared memory 中，让 block 内线程复用数据。

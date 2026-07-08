@@ -1,101 +1,81 @@
-# 1D Blocktiling Kernel
+# 1D Register Tiling Kernel
 
-这个目录记录的是我在 SMEM 之后继续往前走的一步：
+## Idea
 
-- 一个 thread 不再只算一个输出
-- 一个 block 负责一个更大的输出 tile
-- 每个 thread 用寄存器数组累加多个结果
+这一版在 shared memory tiling 的基础上加入 1D register tiling。
 
-这版对我来说，已经不只是“思路走通”，而是第一次真正把性能又往上推了一大截。
+核心思路：
 
-## 文件说明
+- 一个 block 负责 `BM x BN` 的 C tile
+- shared memory 缓存 `A` / `B` 的 tile
+- 每个 thread 不再只计算一个输出
+- 每个 thread 负责同一列方向上的 `TM` 个输出
+- `threadResult[TM]` 在寄存器中累加
 
-- `1D_Blocktiling_kernel.cu`: correctness-first 版本
-- `1D_Blocktiling_kernel_benchmark.cu`: benchmark 版本
-- `main_gpu_kernel.cu`: 保留下来的核心思路草稿
-- `profiling/`: Nsight Compute 截图、命令模板和逐图解读
+当前配置：
 
-## 当前配置
+| Parameter  |     Value |
+| ---------- | --------: |
+| `BM`       |        64 |
+| `BN`       |        64 |
+| `BK`       |         8 |
+| `TM`       |         8 |
+| `blockDim` | `512 x 1` |
 
-- `BM = 64`
-- `BN = 64`
-- `BK = 8`
-- `TM = 8`
-- `blockDim = (512, 1)`
+相比 SMEM 版本，这一版第一次明显利用寄存器来扩大每个 thread 的计算量。
 
-简单理解就是：
-
-- 一个 block 负责 `64 x 64` 的输出 tile
-- 只用 `512` 个线程
-- 每个线程负责同一列上的 `8` 个输出
-
-## 编译
+## Build
 
 ```bash
-nvcc -O3 1D_Blocktiling_kernel.cu -o 1D_Blocktiling_kernel
-nvcc -O3 1D_Blocktiling_kernel_benchmark.cu -o 1D_Blocktiling_kernel_benchmark
+nvcc 1D_Blocktiling_kernel.cu -O3 -o 1D_Blocktiling_kernel
+nvcc 1D_Blocktiling_kernel_benchmark.cu -O3 -lineinfo -o 1D_Blocktiling_bench
 ```
 
-## 使用方式
+## Run Benchmark
 
 ```bash
-./1D_Blocktiling_kernel
-./1D_Blocktiling_kernel_benchmark
-./1D_Blocktiling_kernel_benchmark 1024 1024 1024
-./1D_Blocktiling_kernel_benchmark 4096 4096 4096 --no-check
+./1D_Blocktiling_bench \
+  --warmup 10 --iters 50 --bx 512 --by 1 --no-check
 ```
 
-## 这次 benchmark 设置
+当前性能表使用 `--no-check`，主要用于 benchmark 性能记录。正确性需要单独去掉 `--no-check` 开启 CPU check。
 
-- GPU: `NVIDIA GeForce RTX 4060 Laptop GPU`
-- Warmup: `10`
-- Iterations: `50`
-- Block: `512 x 1`
-- CPU check: `disabled`
+## Benchmark Result
 
-## 实测结果
+| M    | N    | K    | Block | Avg (ms) | Avg GFLOPS | Best GFLOPS |
+| ---- | ---- | ---- | ----- | -------: | ---------: | ----------: |
+| 256  | 256  | 256  | 512x1 |   0.0267 |  1258.8250 |   1489.4545 |
+| 512  | 512  | 512  | 512x1 |   0.1003 |  2676.5946 |   2880.7032 |
+| 1024 | 1024 | 1024 | 512x1 |   0.6321 |  3397.1641 |   3426.7189 |
+| 2048 | 2048 | 2048 | 512x1 |   4.6454 |  3698.2388 |   4033.1968 |
+| 4096 | 4096 | 4096 | 512x1 |  37.5543 |  3659.7348 |   3708.4916 |
+| 1023 | 1023 | 1023 | 512x1 |   0.5778 |  3705.5630 |   3788.0688 |
+| 4096 | 256  | 4096 | 512x1 |   2.3885 |  3596.3530 |   3628.2908 |
+| 256  | 4096 | 4096 | 512x1 |   2.4800 |  3463.6959 |   3486.5371 |
 
-| M | N | K | Block | Avg (ms) | Avg GFLOPS | Best GFLOPS |
-|---|---|---|---|---:|---:|---:|
-| 256 | 256 | 256 | 512x1 | 0.0267 | 1258.8250 | 1489.4545 |
-| 512 | 512 | 512 | 512x1 | 0.1003 | 2676.5946 | 2880.7032 |
-| 1024 | 1024 | 1024 | 512x1 | 0.6321 | 3397.1641 | 3426.7189 |
-| 2048 | 2048 | 2048 | 512x1 | 4.6454 | 3698.2388 | 4033.1968 |
-| 4096 | 4096 | 4096 | 512x1 | 37.5543 | 3659.7348 | 3708.4916 |
-| 1023 | 1023 | 1023 | 512x1 | 0.5778 | 3705.5630 | 3788.0688 |
-| 4096 | 256 | 4096 | 512x1 | 2.3885 | 3596.3530 | 3628.2908 |
-| 256 | 4096 | 4096 | 512x1 | 2.4800 | 3463.6959 | 3486.5371 |
+## Compared with Shared Memory Tiling
 
-## 相对前三版
+| Case   | SMEM Avg GFLOPS | 1D Avg GFLOPS |  Change |
+| ------ | --------------: | ------------: | ------: |
+| 256^3  |        640.7902 |     1258.8250 |  +96.4% |
+| 512^3  |        836.6070 |     2676.5946 | +219.9% |
+| 1024^3 |        904.6960 |     3397.1641 | +275.5% |
+| 2048^3 |       1039.4091 |     3698.2388 | +255.8% |
+| 4096^3 |        958.3544 |     3659.7348 | +281.9% |
 
-| Case | Naive | Coalesced | SMEM | 1D Blocktiling |
-|---|---:|---:|---:|---:|
-| 256 x 256 x 256 | 92.2776 | 616.2947 | 640.7902 | 1258.8250 |
-| 512 x 512 x 512 | 109.5825 | 830.3416 | 836.6070 | 2676.5946 |
-| 1024 x 1024 x 1024 | 123.4315 | 886.0027 | 904.6960 | 3397.1641 |
-| 2048 x 2048 x 2048 | 123.5758 | 1026.0384 | 1039.4091 | 3698.2388 |
-| 4096 x 4096 x 4096 | 123.0080 | 870.8718 | 958.3544 | 3659.7348 |
+## What This Stage Shows
 
-## 这组结果怎么看
+- register tiling 是当前路线里非常关键的一步
+- square case 从 SMEM 的 `~0.9-1.0 TFLOPS` 推到 `~1.26-3.70 TFLOPS`
+- 从 `1024^3` 开始，性能基本稳定进入 `3 TFLOPS+`
+- 每个 thread 计算多个输出，明显提高了 shared memory tile 的复用效率
 
-- 这次和前面三版已经明显拉开了
-- square case 基本站在 `~1.26-3.70 TFLOPS`
-- 从 `1024` 开始，已经稳定进入 `3 TFLOPS+`
+## Known Issues / Notes
 
-这说明这版的关键收益是真实的：
+- 1D 版本只在一个方向上增加每个 thread 的输出数量
+- 每个 thread 仍然只复用一列方向上的结果
+- 后续 2D register tiling 会尝试让每个 thread 计算 `TM x TN` 的结果小块
 
-- 一个 thread 计算多个输出值是值得的
-- register blocking 确实把数据复用进一步放大了
-- block tiling 不只是“结构更复杂”，而是真的把吞吐往上推了
+## Next Step
 
-经验上看，这版最该记住的一句话是：
-
-- shared memory 把路铺好以后，继续让每个 thread 多算几个结果，性能提升会非常明显
-
-## 当前结论
-
-这版现在已经是当前项目里最强的一版：
-
-- 比 SMEM 再快一个明显台阶
-- 比 naive 快得非常多
-- 已经可以作为后续继续做 `2D block tiling`、`vectorized load`、`warp tiling` 的新起点
+下一阶段是 `2D Register Tiling`：每个 thread 计算一个二维 micro tile，通过 `regM[TM]` 和 `regN[TN]` 做外积。

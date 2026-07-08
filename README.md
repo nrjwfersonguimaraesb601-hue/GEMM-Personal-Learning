@@ -1,75 +1,75 @@
-# GEMM_For_Myself
+# CUDA GEMM Optimization Learning
 
-这是一个我自己用来学习 CUDA GEMM 的仓库。
+## Overview
 
-这个项目的目标不是一下子写出一个最终高性能库，而是把优化路径一版一版走清楚：
+这是一个 CUDA SGEMM/GEMM 优化学习项目。
 
-- 先有 baseline
-- 再做 coalescing
-- 再做 shared memory
-- 再做 block tiling / register blocking
+项目目标是沿着经典 GEMM 优化路线，从最基础的 naive kernel 开始，逐步学习和验证：
 
-我更在意的是每一步都能解释清楚、验证清楚、测量清楚。
+- global memory coalescing
+- shared memory tiling
+- 1D register tiling
+- 2D register tiling
 
-## 当前进度
+每一版都会尽量保留代码、benchmark 结果和 Nsight Compute 观察，方便回看“这一阶段到底改变了什么、性能为什么变化”。
 
-现在仓库里已经有四个主要阶段：
+这不是工业级 GEMM 库，也不声称达到 cuBLAS 水平。当前重点是学习优化路线、建立稳定 benchmark 口径，并用 profiling 工具理解瓶颈。
 
-- [naive_kernel](./naive_kernel/README.md): 最基础的 non-coalesced baseline
-- [Global_Memory_Coalescing_kernel](./Global_Memory_Coalescing_kernel/README.md): 第一版 global memory 合并访问优化
-- [SMEM_kernel](./SMEM_kernel/README.md): 第一版 shared-memory tiling
-- [1D_Blocktiling_kernel](./1D_Blocktiling_kernel/README.md): 第一版 1D block tiling / register blocking
+## Hardware Environment
 
-这四版现在都已经开始有各自的 profiling 资料：
-
-- `naive / coalesced / SMEM / 1D blocktiling` 都保留了 Nsight Compute 的截图和说明
-- 可以直接沿着代码、benchmark、profiling 三条线一起看每一步优化到底改变了什么
-
-## 这次统一 benchmark 口径
-
-下面这些 README 和总结文件，当前都统一按这套测速口径记录：
+当前记录中的 benchmark 主要来自：
 
 - GPU: `NVIDIA GeForce RTX 4060 Laptop GPU`
-- Warmup: `10`
-- Iterations: `50`
-- `CPU check: disabled`
-- 表格中的结果是 pure kernel benchmark，不含 H2D / D2H 拷贝
+- Compute Capability: `8.9`
+- Global Memory: `8.00 GiB`
+- SM Count: `24`
+- Max Threads Per Block: `1024`
 
-correctness 仍然由各目录里的 correctness-first 可执行版本单独确认。
+## Optimization Progress
 
-## 现在可以怎么理解这条优化路线
+| Stage | Directory | Status |
+|---|---|---|
+| Naive Kernel | [`naive_kernel`](./naive_kernel/README.md) | completed baseline |
+| Global Memory Coalescing | [`Global_Memory_Coalescing_kernel`](./Global_Memory_Coalescing_kernel/README.md) | completed |
+| Shared Memory Tiling | [`SMEM_kernel`](./SMEM_kernel/README.md) | completed |
+| 1D Register Tiling | [`1D_Blocktiling_kernel`](./1D_Blocktiling_kernel/README.md) | completed |
+| 2D Register Tiling | [`2D_Blocktiling_kernel`](./2D_Blocktiling_kernel/README.md) | basic implementation + benchmark completed |
 
-从这次最新结果看，路线已经很清楚了：
+后续方向包括 shared memory layout、vectorized memory access、bank conflict optimization，以及更系统的 `BM / BN / BK / TM / TN` 调参。
 
-1. naive baseline 先把起点固定在 `~123 GFLOPS`
-2. coalescing 直接把 square case 推到 `~616-1026 GFLOPS`
-3. shared memory 再把这条线往上推到 `~641-1039 GFLOPS`
-4. 1D block tiling / register blocking 则第一次把主力区间推进到 `~1.26-3.70 TFLOPS`
+## Current Status
 
-换句话说，这个项目现在已经不只是“有几个学习版 kernel”，而是已经形成了一条比较完整、数据也比较连贯的优化路径。
+项目当前推进到 `2D Register Tiling` 阶段。
 
-## 仓库结构
+2D 基础实现已经跑通 benchmark，在大矩阵上相对 1D register tiling 有提升。例如 `4096^3` 从 1D 的约 `3659.73 GFLOPS` 提升到 2D 的约 `4505.61 GFLOPS`。
 
-- `naive_kernel/`: naive baseline
-- `Global_Memory_Coalescing_kernel/`: coalesced global-memory 版本
-- `SMEM_kernel/`: shared-memory 版本
-- `1D_Blocktiling_kernel/`: 1D block tiling 版本
-- `*/profiling/`: 对应版本的 Nsight Compute 截图、命令模板和解读
-- `PERFORMANCE_SUMMARY.md`: 各版本横向对比
-- `TODO.md`: 后续推进路线
-- `NSIGHT_COMPUTE_PROFILING_GUIDE.md`: Nsight Compute 使用记录
+不过当前 2D kernel 还不是最终优化版本。Nsight Compute 显示它仍然存在几个明显问题：
 
-## 当前结论
+- shared memory bank conflict
+- global store access pattern 不理想
+- uncoalesced shared access
+- register pressure 较高
 
-按这次最新数据，我会把这四版的定位记成这样：
+所以当前阶段先记录结果和问题，不继续修改 kernel 代码。
 
-- `naive`: 稳定 baseline
-- `coalesced`: 第一波大提升
-- `SMEM`: 在 coalesced 基础上继续抬高
-- `1D blocktiling`: 当前项目里最强的一版，第一次明显进入 `TFLOPS` 级别并站稳 `3 TFLOPS+`
+## Benchmark Summary
 
-这也说明后面的路线已经比较明确了：
+完整性能表和相对上一版的提升记录在：
 
-- 继续做更深的 tiling
-- 继续提高寄存器和 shared memory 的利用
-- 最后再和 cuBLAS 做系统对比
+- [`PERFORMANCE_SUMMARY.md`](./PERFORMANCE_SUMMARY.md)
+
+简要结论：
+
+- Naive square baseline 约为 `~123 GFLOPS`
+- Global memory coalescing 把 square case 推到 `~616-1026 GFLOPS`
+- Shared memory tiling 进一步稳定到 `~641-1039 GFLOPS`
+- 1D register tiling 在 `4096^3` 上约 `3659.73 GFLOPS`
+- 2D register tiling 在 `4096^3` 上约 `4505.61 GFLOPS`
+- 2D 相对 1D 在 `4096^3` 上提升约 `23.1%`
+- 小矩阵上 2D 不一定更快，可能受到 kernel 开销、寄存器压力和访存模式影响
+
+## Notes
+
+性能表主要用于观察优化趋势。部分 benchmark 使用 `--no-check`，这表示关闭 CPU reference 校验，只记录 kernel benchmark 性能。
+
+正确性需要单独开启 CPU check，或者运行对应目录下的 correctness-first 版本。
