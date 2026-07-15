@@ -1,75 +1,74 @@
-# GEMM_For_Myself
+# CUDA GEMM Optimization Learning
 
-这是一个我自己用来学习 CUDA GEMM 的仓库。
+一个从朴素 SGEMM 出发、逐步学习 CUDA GEMM 优化的实践项目。每个阶段保留
+kernel、benchmark 与 Nsight Compute 记录，用来观察优化后性能如何变化、
+瓶颈如何迁移。
 
-这个项目的目标不是一下子写出一个最终高性能库，而是把优化路径一版一版走清楚：
+> 这是学习项目，不是工业级 GEMM 库，也不以替代 cuBLAS 为目标。
 
-- 先有 baseline
-- 再做 coalescing
-- 再做 shared memory
-- 再做 block tiling / register blocking
+## 优化路线
 
-我更在意的是每一步都能解释清楚、验证清楚、测量清楚。
+下表统一使用 `4096^3` 的 Avg GFLOPS：
 
-## 当前进度
+| Stage | Implementation | Avg Performance |
+| ----: | -------------- | --------------: |
+| 1 | [Naive kernel](./1.naive_kernel/README.md) | `0.123 TFLOPS` |
+| 2 | [Global memory coalescing](./2.Global_Memory_Coalescing_kernel/README.md) | `0.871 TFLOPS` |
+| 3 | [Shared memory tiling](./3.SMEM_kernel/README.md) | `0.958 TFLOPS` |
+| 4 | [1D register tiling](./4.1D_Blocktiling_kernel/README.md) | `3.660 TFLOPS` |
+| 5 | [2D register tiling](./5.2D_Blocktiling_kernel/README.md) | `4.506 TFLOPS` |
+| 6 | [Vectorized memory access](./6.Vectorize_kernel/README.md) | `7.802 TFLOPS` |
 
-现在仓库里已经有四个主要阶段：
+完整的逐尺寸数据见 [PERFORMANCE_SUMMARY.md](./PERFORMANCE_SUMMARY.md)。
 
-- [naive_kernel](./naive_kernel/README.md): 最基础的 non-coalesced baseline
-- [Global_Memory_Coalescing_kernel](./Global_Memory_Coalescing_kernel/README.md): 第一版 global memory 合并访问优化
-- [SMEM_kernel](./SMEM_kernel/README.md): 第一版 shared-memory tiling
-- [1D_Blocktiling_kernel](./1D_Blocktiling_kernel/README.md): 第一版 1D block tiling / register blocking
+## 当前阶段：Vectorized Memory Access
 
-这四版现在都已经开始有各自的 profiling 资料：
+当前版本沿用 `BM=64, BN=64, BK=8, TM=8, TN=8` 的 2D register tiling，
+并加入以下变化：
 
-- `naive / coalesced / SMEM / 1D blocktiling` 都保留了 Nsight Compute 的截图和说明
-- 可以直接沿着代码、benchmark、profiling 三条线一起看每一步优化到底改变了什么
+- A、B 使用 `float4` 从 global memory 加载
+- A tile 在写入 shared memory 时转置，改善计算阶段的读取方式
+- C 使用 `float4` 写回，每次存储连续 4 个结果
+- SASS 已生成 `LDG.E.128` / `STG.E.128`
 
-## 这次统一 benchmark 口径
+主要结果：
 
-下面这些 README 和总结文件，当前都统一按这套测速口径记录：
+- 7 个 benchmark case 全部通过 CPU reference check
+- `1024^3`: `6412.41 GFLOPS`，比 2D 版本提升 `88.8%`
+- `4096^3`: `7802.28 GFLOPS`，比 2D 版本提升 `73.2%`
+- 7 个共同合法尺寸上的提升范围为 `63.2%–88.8%`
 
-- GPU: `NVIDIA GeForce RTX 4060 Laptop GPU`
-- Warmup: `10`
-- Iterations: `50`
-- `CPU check: disabled`
-- 表格中的结果是 pure kernel benchmark，不含 H2D / D2H 拷贝
+当前实现要求 `M % 64 == 0`、`N % 64 == 0`、`K % 8 == 0`，因此没有把
+旧测试中的 `1023^3` 用例直接搬过来。
 
-correctness 仍然由各目录里的 correctness-first 可执行版本单独确认。
+## 编译和运行当前版本
 
-## 现在可以怎么理解这条优化路线
+```bash
+cd 6.Vectorize_kernel
 
-从这次最新结果看，路线已经很清楚了：
+nvcc -O3 -lineinfo -arch=sm_89 \
+  Vectorize_kernel_benchmark.cu \
+  -o Vectorize_bench
 
-1. naive baseline 先把起点固定在 `~123 GFLOPS`
-2. coalescing 直接把 square case 推到 `~616-1026 GFLOPS`
-3. shared memory 再把这条线往上推到 `~641-1039 GFLOPS`
-4. 1D block tiling / register blocking 则第一次把主力区间推进到 `~1.26-3.70 TFLOPS`
+./Vectorize_bench \
+  --warmup 10 --iters 50 --bx 64 --by 1
+```
 
-换句话说，这个项目现在已经不只是“有几个学习版 kernel”，而是已经形成了一条比较完整、数据也比较连贯的优化路径。
+不传位置参数 `M N K` 时，会依次输出全部内置尺寸的 latency、Avg GFLOPS、
+Best GFLOPS 和 correctness 结果。
 
-## 仓库结构
+## 测试环境
 
-- `naive_kernel/`: naive baseline
-- `Global_Memory_Coalescing_kernel/`: coalesced global-memory 版本
-- `SMEM_kernel/`: shared-memory 版本
-- `1D_Blocktiling_kernel/`: 1D block tiling 版本
-- `*/profiling/`: 对应版本的 Nsight Compute 截图、命令模板和解读
-- `PERFORMANCE_SUMMARY.md`: 各版本横向对比
-- `TODO.md`: 后续推进路线
-- `NSIGHT_COMPUTE_PROFILING_GUIDE.md`: Nsight Compute 使用记录
+- GPU: NVIDIA GeForce RTX 4060 Laptop GPU
+- Compute Capability: 8.9
+- SMs: 24
+- Global Memory: 8 GiB
+- Benchmark: warmup 10 次，正式迭代 50 次
 
-## 当前结论
+## 下一步
 
-按这次最新数据，我会把这四版的定位记成这样：
-
-- `naive`: 稳定 baseline
-- `coalesced`: 第一波大提升
-- `SMEM`: 在 coalesced 基础上继续抬高
-- `1D blocktiling`: 当前项目里最强的一版，第一次明显进入 `TFLOPS` 级别并站稳 `3 TFLOPS+`
-
-这也说明后面的路线已经比较明确了：
-
-- 继续做更深的 tiling
-- 继续提高寄存器和 shared memory 的利用
-- 最后再和 cuBLAS 做系统对比
+- 根据 Nsight Compute 结果降低 shared-memory conflict，并提高 C store sector 利用率
+- 改进 A 的 warp-level global-load 合并访问
+- 支持非整除尺寸和尾部 tile
+- 调整 tile 参数并尝试 double buffering / warp tiling
+- 增加统一的 cuBLAS baseline 和性能曲线
