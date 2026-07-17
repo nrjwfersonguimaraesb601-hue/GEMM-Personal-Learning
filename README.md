@@ -18,25 +18,29 @@ kernel、benchmark 与 Nsight Compute 记录，用来观察优化后性能如何
 | 4 | [1D register tiling](./4.1D_Blocktiling_kernel/README.md) | `3.660 TFLOPS` |
 | 5 | [2D register tiling](./5.2D_Blocktiling_kernel/README.md) | `4.506 TFLOPS` |
 | 6 | [Vectorized memory access](./6.Vectorize_kernel/README.md) | `7.802 TFLOPS` |
+| 7 | [Shared-memory layout padding](./7.Shared_Memory_Layout_Optimization/README.md) | `8.582 TFLOPS` |
 
 完整的逐尺寸数据见 [PERFORMANCE_SUMMARY.md](./PERFORMANCE_SUMMARY.md)。
 
-## 当前阶段：Vectorized Memory Access
+## 当前阶段：Shared-memory Layout Padding
 
-当前版本沿用 `BM=64, BN=64, BK=8, TM=8, TN=8` 的 2D register tiling，
-并加入以下变化：
+当前版本沿用 Stage 6 的 `BM=64, BN=64, BK=8, TM=8, TN=8`、`float4`
+访存和 2D register tiling，集中优化 Nsight Compute 暴露出的 shared-memory
+bank conflict：
 
-- A、B 使用 `float4` 从 global memory 加载
-- A tile 在写入 shared memory 时转置，改善计算阶段的读取方式
-- C 使用 `float4` 写回，每次存储连续 4 个结果
-- SASS 已生成 `LDG.E.128` / `STG.E.128`
+- As 的物理布局由 `[BK][BM]` 改为 `[BK][BM + 4]`
+- Bs 的物理布局由 `[BK][BN]` 改为 `[BK][BN + 4]`
+- As/Bs 合计使用 `4352 bytes` static shared memory
+- 通过多轮 Nsight Compute 分析，主要 bank conflict 已经基本消除
+- XOR swizzle 暂时作为后续扩展，本阶段只掌握 padding
 
 主要结果：
 
-- 7 个 benchmark case 全部通过 CPU reference check
-- `1024^3`: `6412.41 GFLOPS`，比 2D 版本提升 `88.8%`
-- `4096^3`: `7802.28 GFLOPS`，比 2D 版本提升 `73.2%`
-- 7 个共同合法尺寸上的提升范围为 `63.2%–88.8%`
+- `256^3`、`512^3`、`1024^3` 均通过 CPU reference check
+- `1024^3`: `7429.68 GFLOPS`，比 Vectorized 版本提升 `15.9%`
+- `4096^3`: 完整 suite 为 `8581.60 GFLOPS`，提升 `10.0%`
+- `4096^3` 单独复测达到 `8984.18 GFLOPS`，平均吞吐接近 `9.0 TFLOPS`
+- `256x4096x4096` 提升 `25.1%`
 
 当前实现要求 `M % 64 == 0`、`N % 64 == 0`、`K % 8 == 0`，因此没有把
 旧测试中的 `1023^3` 用例直接搬过来。
@@ -44,14 +48,14 @@ kernel、benchmark 与 Nsight Compute 记录，用来观察优化后性能如何
 ## 编译和运行当前版本
 
 ```bash
-cd 6.Vectorize_kernel
+cd 7.Shared_Memory_Layout_Optimization
 
 nvcc -O3 -lineinfo -arch=sm_89 \
-  Vectorize_kernel_benchmark.cu \
-  -o Vectorize_bench
+  Shared_Memory_Layout_Padding_benchmark.cu \
+  -o Shared_Memory_Layout_Padding_bench
 
-./Vectorize_bench \
-  --warmup 10 --iters 50 --bx 64 --by 1
+./Shared_Memory_Layout_Padding_bench \
+  --warmup 10 --iters 50
 ```
 
 不传位置参数 `M N K` 时，会依次输出全部内置尺寸的 latency、Avg GFLOPS、
@@ -67,8 +71,8 @@ Best GFLOPS 和 correctness 结果。
 
 ## 下一步
 
-- 根据 Nsight Compute 结果降低 shared-memory conflict，并提高 C store sector 利用率
 - 改进 A 的 warp-level global-load 合并访问
 - 支持非整除尺寸和尾部 tile
 - 调整 tile 参数并尝试 double buffering / warp tiling
 - 增加统一的 cuBLAS baseline 和性能曲线
+- 将 XOR swizzle 保留为后续 shared-memory layout 扩展实验
