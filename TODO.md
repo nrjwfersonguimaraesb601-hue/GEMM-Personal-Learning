@@ -16,6 +16,14 @@
   - [x] 多尺寸 benchmark 与 CPU reference check
   - [x] InstructionStats / Full Nsight Compute 报告采集
   - [x] README 和统一性能汇总
+- [x] Stage 7: Shared-memory layout padding
+  - [x] 使用 Nsight Compute 定位 shared-memory bank conflict
+  - [x] 为 Bs 增加 padding 并统一物理读写 stride
+  - [x] 为 As 增加 padding，进一步降低 bank conflict
+  - [x] 保持原有 `float4`、2D register tiling 和计算映射
+  - [x] 多尺寸 benchmark 与 CPU reference check
+  - [x] InstructionStats / Full Nsight Compute 分析
+  - [x] README、根目录说明和统一性能汇总
 
 ## 下一步优先级
 
@@ -25,7 +33,7 @@
   - [x] 检查 shared-memory bank conflict 和 excessive wavefront
   - [x] 记录 registers/thread、scheduler utilization 和主要 stall reason
 
-- [ ] 改进 Vectorized kernel
+- [ ] 继续改进当前 GEMM kernel
   - [ ] 重新设计 A 的协作式加载映射，使一个 warp 的 global 地址更连续
   - [ ] 分离 A/B load、A transpose、C store，做 ablation benchmark
   - [ ] 增加非整除尺寸的边界处理或 tail kernel
@@ -39,6 +47,11 @@
 - [ ] cuBLAS baseline
   - [ ] 在统一尺寸和相同数据类型下测试 cuBLAS SGEMM
   - [ ] 记录各版本达到 cuBLAS 性能的百分比
+
+- [ ] Shared-memory layout 扩展（暂缓）
+  - [ ] 学习 XOR swizzle 的地址映射原理
+  - [ ] 实现独立的 XOR-swizzled kernel 和 benchmark
+  - [ ] 在相同参数下与 padding 版本对比 bank conflict、指令开销和性能
 
 ## 持续补充
 
