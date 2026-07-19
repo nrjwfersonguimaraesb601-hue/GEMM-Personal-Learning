@@ -24,6 +24,13 @@
   - [x] 多尺寸 benchmark 与 CPU reference check
   - [x] InstructionStats / Full Nsight Compute 分析
   - [x] README、根目录说明和统一性能汇总
+- [x] Stage 8: Compile-time autotuning
+  - [x] 保持 Stage 7 kernel 的计算、`float4` 访存和 padding 布局不变
+  - [x] 枚举 `BM/BN/BK/TM/TN`，比较 14 组编译期配置
+  - [x] quick/full suite、CSV 输出和几何平均排名
+  - [x] 14 组配置全部通过 `256^3` CPU reference check
+  - [x] 保存 C00/C08 的 Nsight Compute 报告和分类截图
+  - [x] 更新 Stage 8 README、根目录说明和统一性能汇总
 
 ## 下一步优先级
 
@@ -37,7 +44,8 @@
   - [ ] 重新设计 A 的协作式加载映射，使一个 warp 的 global 地址更连续
   - [ ] 分离 A/B load、A transpose、C store，做 ablation benchmark
   - [ ] 增加非整除尺寸的边界处理或 tail kernel
-  - [ ] 尝试 `BK=16`、更大的 block tile 和不同的 thread tile
+  - [x] 初步比较 `BK=16`、更大的 block tile 和不同的 thread tile
+  - [ ] 重复验证 C08/C13 等候选，并固定下一版 kernel 参数
 
 - [ ] Warp tiling / pipeline
   - [ ] 引入 warp-level 分工

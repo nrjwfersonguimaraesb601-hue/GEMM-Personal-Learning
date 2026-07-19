@@ -19,6 +19,8 @@
 - Stage 6 Vectorized 的历史运行启用了 CPU check，7 个 case 全部 `PASS`
 - Stage 7 Padding 的默认 `max_check_dim=1024`：前三个用例 `PASS`，更大用例
   显示 `SKIP`
+- Stage 8 Autotuning 在 `256^3` 上验证了 14 个配置，全部 `PASS`；完整 suite
+  使用 warmup 10、正式迭代 50，比较 14 个配置在 7 个 case 上的 Avg GFLOPS
 - CPU check 位于计时区间之外，因此启用检查的 kernel 数据仍可与历史结果比较
 
 Laptop GPU 会受功耗、温度和频率变化影响，表格主要用于观察优化趋势，而不是
@@ -47,6 +49,9 @@ Laptop GPU 会受功耗、温度和频率变化影响，表格主要用于观察
 
 # Stage 7: As/Bs shared-memory padding
 ./Shared_Memory_Layout_Padding_bench --warmup 10 --iters 50
+
+# Stage 8: compile-time autotuning
+./run_autotune.sh full
 ```
 
 这些命令应分别在对应的 kernel 目录中运行。
@@ -127,6 +132,7 @@ static shared memory。默认 `max_check_dim=1024`，所以较大用例的 `SKIP
 | 2D Register Tiling | each thread computes a `TM x TN` micro tile |    `4.506 TFLOPS` |
 | Vectorized         | `float4` load/store and transposed A tile   |    `7.802 TFLOPS` |
 | SMEM Padding       | padded As/Bs physical shared-memory stride  |    `8.582 TFLOPS` |
+| Autotuned C08      | `BM=128, BN=64, BK=16, TM=8, TN=8`         |    `9.665 TFLOPS` |
 
 ## Shared-memory Padding vs Vectorized Notes
 
@@ -142,6 +148,33 @@ Stage 6 的 Nsight Compute 报告显示 shared load/store bank conflict 是主�
 问题之一。本阶段依次为 Bs 和 As 调整物理布局，经过多轮 profiler 验证后，
 主要 conflict 已基本消除，大尺寸吞吐也相应提高。当前先完成 padding 方法；
 XOR swizzle 留作后续扩展学习。
+
+## Stage 8 Autotuning Result
+
+Stage 8 不改变 Stage 7 kernel 的计算逻辑，而是比较 14 组编译期 tile 参数。
+下表记录完整 suite 中综合排名第一的 C08 与同轮 C00 基准；数值来自
+`8.Autoing_kernel/autotune_full.csv`。
+
+| Case | C00 Avg GFLOPS | C08 Avg GFLOPS | Change |
+| ---- | --------------: | --------------: | -----: |
+| `256^3` | 1161.39 | 1323.16 | +13.9% |
+| `512^3` | 4793.33 | 4403.70 | -8.1% |
+| `1024^3` | 7194.59 | 8764.70 | +21.8% |
+| `2048^3` | 9776.41 | 9614.12 | -1.7% |
+| `4096^3` | 9103.69 | 9664.98 | +6.2% |
+| `4096x256x4096` | 7308.30 | 8865.61 | +21.3% |
+| `256x4096x4096` | 8396.84 | 8942.19 | +6.5% |
+
+综合排名使用相对 C00 的几何平均加速比：
+
+| Rank | Config | Parameters | Geomean speedup |
+| ---: | --- | --- | ---: |
+| 1 | C08 | `BM=128, BN=64, BK=16, TM=8, TN=8` | `1.0805x` |
+| 2 | C13 | `BM=64, BN=64, BK=16, TM=8, TN=4` | `1.0631x` |
+| 3 | C11 | `BM=64, BN=64, BK=8, TM=8, TN=4` | `1.0312x` |
+
+C08 的 `4096^3` Avg 为 `9.665 TFLOPS`。这是单轮 Laptop GPU autotune 结果，
+可作为下一版固定参数的候选，不能当作跨设备或所有矩阵尺寸的全局最优。
 
 ## Notes
 
@@ -162,3 +195,4 @@ XOR swizzle 留作后续扩展学习。
 - [Stage 5: 2D register tiling](./5.2D_Blocktiling_kernel/README.md)
 - [Stage 6: Vectorized memory access](./6.Vectorize_kernel/README.md)
 - [Stage 7: Shared-memory layout padding](./7.Shared_Memory_Layout_Optimization/README.md)
+- [Stage 8: Compile-time autotuning](./8.Autoing_kernel/README.md)
