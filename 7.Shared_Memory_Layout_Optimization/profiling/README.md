@@ -59,5 +59,5 @@ compute 与 memory throughput 更均衡，报告中的 kernel duration 也更短
 - [Instruction report notes](./instr_report/README.md)
 - [Capture commands](./capture_commands.md)
 - [Visual checklist](./visual_checklist.md)
-- [Full `.ncu-rep`](../Shared_Memory_Layout_Padding_full.ncu-rep)
-- [Instruction `.ncu-rep`](../Shared_Memory_Layout_Padding_instr.ncu-rep)
+- [Full `.ncu-rep`](./raw/Shared_Memory_Layout_Padding_full.ncu-rep)
+- [Instruction `.ncu-rep`](./raw/Shared_Memory_Layout_Padding_instr.ncu-rep)

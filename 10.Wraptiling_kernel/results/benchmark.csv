@@ -1,0 +1,5 @@
+case,M,N,K,check,avg_gflops,best_gflops,source,notes
+square_1024,1024,1024,1024,SKIP,6313.0621,6553.6002,final_suite,correctness verified separately
+square_2048,2048,2048,2048,SKIP,6578.1271,7760.0446,final_suite,correctness verified separately
+square_4096,4096,4096,4096,SKIP,6670.5097,6873.8835,final_suite,primary summary record
+square_4096_independent,4096,4096,4096,SKIP,6748.1435,6990.1429,independent_run,do not replace full-suite record

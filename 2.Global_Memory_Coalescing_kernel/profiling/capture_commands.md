@@ -1,40 +1,23 @@
 # Coalesced Kernel Capture Commands
 
-## 1. instruction-only 报告
-
 ```bash
-ncu \
-  --set full \
-  --section InstructionStats \
-  --kernel-name calculate_Matrix \
-  -o coalesced_instr \
-  ./My_Global_Memory_Coalescing_kernel_benchmarker 4096 4096 4096 --iters 50 --no-check
+cd /home/fish/GEMM_For_Myself
+make coalesced
+./scripts/profile_stage.sh coalesced full
+./scripts/profile_stage.sh coalesced instr
 ```
 
-## 2. 完整报告
+报告写入：
 
-```bash
-ncu \
-  --set full \
-  --kernel-name calculate_Matrix \
-  -o coalesced_full \
-  ./My_Global_Memory_Coalescing_kernel_benchmarker 4096 4096 4096 --iters 50 --no-check
+```text
+2.Global_Memory_Coalescing_kernel/profiling/raw/gmemc_full.ncu-rep
+2.Global_Memory_Coalescing_kernel/profiling/raw/gmemc_instr.ncu-rep
 ```
 
-## 3. 建议重点看的 section
+```bash
+ncu-ui 2.Global_Memory_Coalescing_kernel/profiling/raw/gmemc_full.ncu-rep
+ncu-ui 2.Global_Memory_Coalescing_kernel/profiling/raw/gmemc_instr.ncu-rep
+```
 
-- Summary
-- Speed Of Light
-- Memory Workload Analysis
-- Instruction Statistics
-- Memory Chart
-- Source
-
-## 4. 记录模板
-
-- Profile date:
-- GPU:
-- Matrix size:
-- Block size:
-- Warmup / iters:
-- Compare target: naive_kernel
+重点比较 global-memory coalescing、sector 利用率、指令数和 scheduler 状态。
+Nsight Compute replay 下的 latency 不用于正式性能排名。

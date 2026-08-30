@@ -1,0 +1,57 @@
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi16ELi8ELi4EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi16ELi8ELi4EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 71 registers, used 1 barriers, 8704 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi16ELi4ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi16ELi4ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, used 1 barriers, 8704 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi8ELi8ELi4EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi8ELi8ELi4EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 71 registers, used 1 barriers, 4352 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi8ELi4ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi8ELi4ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, used 1 barriers, 4352 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi128ELi128ELi16ELi8ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi128ELi128ELi16ELi8ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 125 registers, used 1 barriers, 16896 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi128ELi64ELi16ELi8ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi128ELi64ELi16ELi8ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 126 registers, used 1 barriers, 12800 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi64ELi128ELi16ELi8ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi64ELi128ELi16ELi8ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 126 registers, used 1 barriers, 12800 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi16ELi8ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi16ELi8ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 102 registers, used 1 barriers, 8704 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi128ELi128ELi8ELi8ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi128ELi128ELi8ELi8ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 110 registers, used 1 barriers, 8448 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi128ELi64ELi8ELi8ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi128ELi64ELi8ELi8ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 118 registers, used 1 barriers, 6400 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi64ELi128ELi8ELi8ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi64ELi128ELi8ELi8ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 117 registers, used 1 barriers, 6400 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi64ELi32ELi8ELi8ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi64ELi32ELi8ELi8ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 121 registers, used 1 barriers, 3328 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi32ELi64ELi8ELi8ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi32ELi64ELi8ELi8ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 118 registers, used 1 barriers, 3328 bytes smem, 388 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi8ELi8ELi8EEvPKfS1_Pfiii' for 'sm_89'
+ptxas info    : Function properties for _Z34sgemm_shared_memory_layout_paddingILi64ELi64ELi8ELi8ELi8EEvPKfS1_Pfiii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 119 registers, used 1 barriers, 4352 bytes smem, 388 bytes cmem[0]

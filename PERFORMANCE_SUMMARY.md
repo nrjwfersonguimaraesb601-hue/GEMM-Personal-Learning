@@ -26,37 +26,47 @@
 Laptop GPU 会受功耗、温度和频率变化影响，表格主要用于观察优化趋势，而不是
 作为跨机器的绝对性能结论。
 
+## Controlled 4096³ Comparison (2026-08-30)
+
+这是当前优先使用的同轮 FP32 对比：所有 benchmark 由
+`scripts/run_comparison.sh` 顺序执行，warmup 10、iterations 50。256³ CPU
+reference 全部通过；4096³ 性能循环不执行 CPU reference。
+
+| Stage | Avg (ms) | Avg TFLOPS | Best TFLOPS |
+| ----: | -------: | ----------: | -----------: |
+| 1 Naive | 1202.6100 | 0.114 | 0.115 |
+| 2 Coalesced | 168.8200 | 0.814 | 0.818 |
+| 3 SMEM | 154.9630 | 0.887 | 0.894 |
+| 4 1D Register | 40.7154 | 3.376 | 3.441 |
+| 5 2D Register | 32.3371 | 4.250 | 4.322 |
+| 6 Vectorized | 18.2516 | 7.530 | 8.022 |
+| 7 Padding | 16.3700 | 8.396 | 8.977 |
+| 8 Autotuned C08 | 15.4178 | 8.914 | 9.406 |
+| 10 Warp Tiling | 20.6457 | 6.657 | 6.932 |
+| 11 Double Buffering | 15.6738 | 8.769 | 9.224 |
+| cuBLAS FP32 | 15.7804 | 8.709 | 9.254 |
+
+本轮最佳自定义 Avg 相对 Naive 为 `78.0×`。C08 Avg 比同轮 cuBLAS FP32 高
+约 `2.35%`，但 GPU 时钟、功耗和温度未锁定，单次顺序运行不能证明稳定胜出。
+原始数据见
+[`results/rtx4060_laptop/comparison_4096.csv`](./results/rtx4060_laptop/comparison_4096.csv)。
+
 ## Benchmark Commands
 
 ```bash
-# Stage 1: Naive
-./naive_bench --warmup 10 --iters 50 --bx 32 --by 32 --no-check
+# 全阶段 correctness + 同轮 4096³ FP32 比较
+./scripts/run_comparison.sh
 
-# Stage 2: Global memory coalescing
-./gmemc_bench --warmup 10 --iters 50 --bx 32 --by 32 --no-check
+# 单独运行一个阶段
+./scripts/benchmark_stage.sh vectorized 4096 4096 4096
 
-# Stage 3: Shared memory tiling
-./smem_bench --warmup 10 --iters 50 --bx 32 --by 32 --no-check
-
-# Stage 4: 1D register tiling
-./1D_Blocktiling_bench --warmup 10 --iters 50 --bx 512 --by 1 --no-check
-
-# Stage 5: 2D register tiling
-./2D_Blocktiling_bench --warmup 10 --iters 50 --bx 64 --by 1 --no-check
-
-# Stage 6: Vectorized memory access, correctness enabled
-./Vectorize_bench --warmup 10 --iters 50 --bx 64 --by 1
-
-# Stage 7: As/Bs shared-memory padding
-./Shared_Memory_Layout_Padding_bench --warmup 10 --iters 50
-
-# Stage 8: compile-time autotuning
-./run_autotune.sh full
+# 单独运行完整 Stage 8 autotuning suite
+./8.Autoing_kernel/run_autotune.sh full
 ```
 
-这些命令应分别在对应的 kernel 目录中运行。
+统一脚本从仓库根目录运行；可用 `WARMUP` 和 `ITERS` 环境变量覆盖默认值。
 
-## Kernel Performance Table
+## Historical Kernel Performance Table
 
 统一比较 Avg GFLOPS：
 
@@ -153,7 +163,7 @@ XOR swizzle 留作后续扩展学习。
 
 Stage 8 不改变 Stage 7 kernel 的计算逻辑，而是比较 14 组编译期 tile 参数。
 下表记录完整 suite 中综合排名第一的 C08 与同轮 C00 基准；数值来自
-`8.Autoing_kernel/autotune_full.csv`。
+`8.Autoing_kernel/results/autotune_full.csv`。
 
 | Case | C00 Avg GFLOPS | C08 Avg GFLOPS | Change |
 | ---- | --------------: | --------------: | -----: |
@@ -176,6 +186,76 @@ Stage 8 不改变 Stage 7 kernel 的计算逻辑，而是比较 14 组编译期 
 C08 的 `4096^3` Avg 为 `9.665 TFLOPS`。这是单轮 Laptop GPU autotune 结果，
 可作为下一版固定参数的候选，不能当作跨设备或所有矩阵尺寸的全局最优。
 
+## Stage 10 Warp Tiling Final Result
+
+Stage 10 引入 warp-level 输出分工，但当前实现的寄存器压力和 shared-memory store
+conflict 抵消了预期收益。以下是最终 suite 记录；correctness 在独立运行中验证为
+`PASS`，表中数值只表示 CUDA Event 测速。
+
+| Case | Avg GFLOPS | Best GFLOPS |
+| ---- | ----------: | -----------: |
+| `1024^3` | 6313.0621 | 6553.6002 |
+| `2048^3` | 6578.1271 | 7760.0446 |
+| `4096^3` | 6670.5097 | 6873.8835 |
+
+独立 `4096^3` 复测为 6748.1435 Avg / 6990.1429 Best GFLOPS，不替换同轮 suite
+的主记录。Nsight Compute 的 `1024^3` full report 显示 168 registers/thread、25%
+理论 occupancy、22.33% achieved occupancy，并观察到 shared-store 平均 4-way
+conflict。这是负优化分析，而不是 Stage 8 之后的自动加速。
+
+## Stage 11 Double Buffering Final Result
+
+Stage 11 使用寄存器预取配合 ping-pong shared-memory buffer。它不是 `cp.async`，
+也没有继承 Stage 10 的 warp tile 参数，因此应视为另一条实验分支。correctness
+同样在独立运行中验证为 `PASS`。
+
+| Case | Avg GFLOPS | Best GFLOPS |
+| ---- | ----------: | -----------: |
+| `1024^3` | 7083.9711 | 7307.1498 |
+| `2048^3` | 7618.0570 | 8380.2273 |
+| `4096^3` | 8722.6411 | 9129.2158 |
+
+独立 `4096^3` 复测为 8854.6274 Avg / 9012.7404 Best GFLOPS，不替换 suite
+主记录。`1024^3` profiler 报告显示 128 registers/thread、33.33% 理论 occupancy、
+28.93% achieved occupancy，并仍观察到 shared-load conflict。Profiler 中的
+301.92 us 是 replay 采集上下文，不作为上述 benchmark latency。
+
+## Historical cuBLAS Baseline
+
+主基准使用 FP32 输入、输出和 `CUBLAS_COMPUTE_32F`。由于项目矩阵按 row-major
+存储，wrapper 利用转置等价关系调用 column-major cuBLAS；计时仅覆盖 GEMM。
+
+| Mode | Run | Avg GFLOPS | Best GFLOPS | Usage |
+| ---- | --- | ----------: | -----------: | ----- |
+| FP32 | final validation | 9429.4001 | 9553.0118 | 主基准 |
+| FP32 | independent normal | 9357.0652 | 9532.5090 | 稳定性参考 |
+| FP32 | `NVIDIA_TF32_OVERRIDE=0` | 9308.8622 | 9548.8918 | 环境对照 |
+| TF32 | fast TF32 | 14844.7540 | 15925.2171 | Tensor Core 独立参考 |
+
+这些行是统一脚本加入前的历史记录。合理表述是：cuBLAS FP32 多轮 Avg 约
+9.3–9.4 TFLOPS，与 Stage 8 C08
+的最佳自定义记录处于同一波动区间，现有不同轮次数据不足以证明自定义 kernel
+稳定超过 cuBLAS。TF32 精度和执行路径不同，不能与 FP32 表直接排名。
+
+## Historical v1.0 4096³ Summary
+
+机器可读历史汇总见 [`results/final_4096.csv`](./results/final_4096.csv)。这些行
+来自不同实验轮次，全部使用 Avg：
+
+| Stage | FP32 Avg TFLOPS |
+| ----: | ---------------: |
+| 1 Naive | 0.123 |
+| 2 Coalesced | 0.871 |
+| 3 SMEM | 0.958 |
+| 4 1D Register Tiling | 3.660 |
+| 5 2D Register Tiling | 4.506 |
+| 6 Vectorized | 7.802 |
+| 7 Padding | 8.582 |
+| 8 Autotuned C08 | 9.665 |
+| 10 Warp Tiling | 6.671 |
+| 11 Double Buffering | 8.723 |
+| cuBLAS FP32 | 9.429 |
+
 ## Notes
 
 - 数据用于学习和趋势观察，不代表工业级最终性能
@@ -196,3 +276,6 @@ C08 的 `4096^3` Avg 为 `9.665 TFLOPS`。这是单轮 Laptop GPU autotune 结�
 - [Stage 6: Vectorized memory access](./6.Vectorize_kernel/README.md)
 - [Stage 7: Shared-memory layout padding](./7.Shared_Memory_Layout_Optimization/README.md)
 - [Stage 8: Compile-time autotuning](./8.Autoing_kernel/README.md)
+- [Stage 10: Warp tiling](./10.Wraptiling_kernel/README.md)
+- [Stage 11: Double buffering](./11.Double_Buffering/README.md)
+- [cuBLAS baseline](./cuBLAS_baseline/README.md)

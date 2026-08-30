@@ -1,82 +1,55 @@
 # TODO
 
-这个文件按当前项目的实际进度维护后续学习路线。
+## v1.0 已完成
 
-## 已完成
+- [x] Stage 1–3：Naive、coalescing、shared-memory tiling
+- [x] Stage 4–5：1D/2D register tiling
+- [x] Stage 6：`float4` vectorized load/store 与对应 profiling
+- [x] Stage 7：shared-memory padding 与 bank-conflict 分析
+- [x] Stage 8：14 组编译期配置 quick/full autotuning、CSV 与 C00/C08 报告
+- [x] Stage 10：Warp Tiling kernel、benchmark、correctness 与 Nsight Compute
+  - [x] 保留其相对 Stage 8 的性能回退，作为负优化结果
+- [x] Stage 11：软件 Double Buffering kernel、benchmark、correctness 与 profiling
+  - [x] 明确当前版本不是 `cp.async` pipeline
+- [x] cuBLAS baseline
+  - [x] FP32 `CUBLAS_COMPUTE_32F` 正式基准
+  - [x] TF32 Tensor Core 独立参考，不混入 FP32 排名
+- [x] v1.0 工程整理
+  - [x] 根 Makefile 与统一 build 输出
+  - [x] correctness、benchmark、profiling 脚本分离
+  - [x] results / notes / profiling 分类
+  - [x] 4096³ CSV 与 SVG 性能图
+  - [x] 保留原始 `.ncu-rep`、截图、日志和学习笔记
 
-- [x] Stage 1: Naive kernel、benchmark 与 profiling
-- [x] Stage 2: Global memory coalescing kernel、benchmark 与 profiling
-- [x] Stage 3: Shared memory tiling kernel、benchmark 与 profiling
-- [x] Stage 4: 1D register tiling kernel、benchmark 与 profiling
-- [x] Stage 5: 2D register tiling kernel、benchmark 与 profiling
-- [x] Stage 6: Vectorized memory access kernel
-  - [x] A/B 的 `float4` global load
-  - [x] A tile 转置写入 shared memory
-  - [x] C 的 `float4` global store
-  - [x] 多尺寸 benchmark 与 CPU reference check
-  - [x] InstructionStats / Full Nsight Compute 报告采集
-  - [x] README 和统一性能汇总
-- [x] Stage 7: Shared-memory layout padding
-  - [x] 使用 Nsight Compute 定位 shared-memory bank conflict
-  - [x] 为 Bs 增加 padding 并统一物理读写 stride
-  - [x] 为 As 增加 padding，进一步降低 bank conflict
-  - [x] 保持原有 `float4`、2D register tiling 和计算映射
-  - [x] 多尺寸 benchmark 与 CPU reference check
-  - [x] InstructionStats / Full Nsight Compute 分析
-  - [x] README、根目录说明和统一性能汇总
-- [x] Stage 8: Compile-time autotuning
-  - [x] 保持 Stage 7 kernel 的计算、`float4` 访存和 padding 布局不变
-  - [x] 枚举 `BM/BN/BK/TM/TN`，比较 14 组编译期配置
-  - [x] quick/full suite、CSV 输出和几何平均排名
-  - [x] 14 组配置全部通过 `256^3` CPU reference check
-  - [x] 保存 C00/C08 的 Nsight Compute 报告和分类截图
-  - [x] 更新 Stage 8 README、根目录说明和统一性能汇总
+## 下一阶段优先级
 
-## 下一步优先级
+- [ ] 正确性与通用性
+  - [ ] 为非整除尺寸增加边界处理或独立 tail kernel
+  - [ ] 增加随机矩阵、非方阵和更多维度组合的 correctness tests
+  - [ ] 将 CPU reference 结果与纯测速结果分文件归档
+- [ ] 可复现性能
+  - [ ] 在固定 power/clock/temperature 条件下统一复测所有 FP32 kernel
+  - [ ] 重复 C08、Stage 11 与 cuBLAS FP32，报告均值、方差和置信区间
+  - [ ] 增加 GFLOPS-vs-size 与 latency-vs-size 曲线
+  - [ ] 记录 CUDA、driver、cuBLAS 与 Nsight Compute 版本
+- [ ] Warp Tiling 复盘
+  - [ ] 对 Stage 10 的 168 registers/thread、25% 理论 occupancy 做 ablation
+  - [ ] 重构 A 的 warp-level cooperative load，降低 shared-store conflict
+  - [ ] 分别测量 warp 映射、load mapping、tile 尺寸的独立影响
+- [ ] Pipeline 实验
+  - [ ] 量化 Stage 11 软件预取的 overlap 与额外寄存器开销
+  - [ ] 新建独立 `cp.async` 实验，不把它混写为当前 Stage 11
+  - [ ] 探索多 stage pipeline 和 barrier 管理
+- [ ] Shared-memory layout 扩展
+  - [ ] 新建 XOR swizzle 实验，与 padding 做相同配置对比
+  - [ ] 同时比较 bank conflict、指令开销、occupancy 和正式吞吐
 
-- [x] 分析 Vectorized kernel 的 Nsight Compute 报告
-  - [x] 确认生成 `LDG.E.128` / `STG.E.128`
-  - [x] 对比 2D 版本的 global-store sector 利用率
-  - [x] 检查 shared-memory bank conflict 和 excessive wavefront
-  - [x] 记录 registers/thread、scheduler utilization 和主要 stall reason
+## 每个新版本的完成标准
 
-- [ ] 继续改进当前 GEMM kernel
-  - [ ] 重新设计 A 的协作式加载映射，使一个 warp 的 global 地址更连续
-  - [ ] 分离 A/B load、A transpose、C store，做 ablation benchmark
-  - [ ] 增加非整除尺寸的边界处理或 tail kernel
-  - [x] 初步比较 `BK=16`、更大的 block tile 和不同的 thread tile
-  - [ ] 重复验证 C08/C13 等候选，并固定下一版 kernel 参数
-
-- [ ] Warp tiling / pipeline
-  - [ ] 引入 warp-level 分工
-  - [ ] 尝试 double buffering，重叠 global-to-shared load 与计算
-  - [ ] 评估 `cp.async` 作为后续实验方向
-
-- [ ] cuBLAS baseline
-  - [ ] 在统一尺寸和相同数据类型下测试 cuBLAS SGEMM
-  - [ ] 记录各版本达到 cuBLAS 性能的百分比
-
-- [ ] Shared-memory layout 扩展（暂缓）
-  - [ ] 学习 XOR swizzle 的地址映射原理
-  - [ ] 实现独立的 XOR-swizzled kernel 和 benchmark
-  - [ ] 在相同参数下与 padding 版本对比 bank conflict、指令开销和性能
-
-## 持续补充
-
-- [ ] 用统一编译参数复测所有 kernel
-- [ ] 把 correctness run 和 pure-speed run 分开归档
-- [ ] 增加 `GFLOPS vs size` 曲线
-- [ ] 增加 `runtime vs size` 曲线
-- [ ] 记录 GPU power mode、频率和温度，减少 Laptop GPU 测试波动
-- [ ] 整理每一阶段的 Nsight Compute 截图和结论
-
-## 每一版完成标准
-
-每新增一个 kernel 版本，至少完成：
-
-- [ ] correctness check 可运行且通过
-- [ ] 多尺寸 benchmark 可运行
-- [ ] README 记录核心技术变化与限制
-- [ ] README 记录最新实测结果
-- [ ] 与上一版使用 Avg GFLOPS 做同尺寸对比
-- [ ] 保存可复现的编译与 Nsight Compute 命令
+- [ ] 权威 kernel 与 benchmark 关系清楚
+- [ ] 小尺寸 CPU correctness check 实际执行并 `PASS`
+- [ ] 多尺寸 CUDA Event benchmark 可复现
+- [ ] README 记录 tile 约束、精度、编译和运行命令
+- [ ] 与上一阶段做相同尺寸、相同测试口径的 Avg GFLOPS 对比
+- [ ] 保存原始 CSV/log 和 Nsight Compute `.ncu-rep`
+- [ ] profiler latency 与正式 benchmark 数据分开

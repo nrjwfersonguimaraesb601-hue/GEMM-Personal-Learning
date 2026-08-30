@@ -1,0 +1,13 @@
+stage,kernel,M,N,K,precision,avg_gflops,best_gflops,source,run_type,notes
+1,Naive,4096,4096,4096,FP32,123.0080,124.7219,historical_suite,cuda_event,baseline
+2,Global Memory Coalescing,4096,4096,4096,FP32,870.8718,891.6107,historical_suite,cuda_event,coalesced thread mapping
+3,Shared Memory Tiling,4096,4096,4096,FP32,958.3544,974.4422,historical_suite,cuda_event,modest improvement
+4,1D Register Tiling,4096,4096,4096,FP32,3659.7348,3708.4916,historical_suite,cuda_event,first major register reuse gain
+5,2D Register Tiling,4096,4096,4096,FP32,4505.6055,4609.2836,historical_suite,cuda_event,TMxTN micro tile
+6,Vectorized Access,4096,4096,4096,FP32,7802.2829,8378.1353,historical_suite,cuda_event,float4 load and store
+7,Shared Memory Padding,4096,4096,4096,FP32,8581.5961,9352.5000,historical_suite,cuda_event,full-suite primary record
+8,Autotuned C08,4096,4096,4096,FP32,9664.9800,9777.6400,stage8_autotune_full,cuda_event,best geomean candidate not every-shape winner
+10,Warp Tiling,4096,4096,4096,FP32,6670.5097,6873.8835,final_stage10_suite,cuda_event,negative optimization in current implementation
+11,Double Buffering,4096,4096,4096,FP32,8722.6411,9129.2158,final_stage11_suite,cuda_event,register-prefetched ping-pong SMEM
+baseline,cuBLAS FP32,4096,4096,4096,FP32,9429.4001,9553.0118,cublas_validation,cuda_event,different run from custom kernels
+reference,cuBLAS TF32,4096,4096,4096,TF32,14844.7540,15925.2171,cublas_tf32_reference,cuda_event,separate Tensor Core reference

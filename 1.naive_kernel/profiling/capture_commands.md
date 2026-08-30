@@ -1,49 +1,26 @@
 # Naive Kernel Capture Commands
 
-下面是建议保留在仓库里的 profiling 命令模板，你后面可以按实际可执行文件路径微调。
-
-## 1. 采 instruction-only 报告
+从项目根目录统一构建并采集报告：
 
 ```bash
-ncu \
-  --set full \
-  --section InstructionStats \
-  --kernel-name calculate_Matrix \
-  -o naive_instr \
-  ./My_naive_kernel_benchmark 4096 4096 4096 --iters 50 --no-check
+cd /home/fish/GEMM_For_Myself
+make naive
+./scripts/profile_stage.sh naive full
+./scripts/profile_stage.sh naive instr
 ```
 
-## 2. 采完整报告
+报告写入：
+
+```text
+1.naive_kernel/profiling/raw/naive_full.ncu-rep
+1.naive_kernel/profiling/raw/naive_instr.ncu-rep
+```
 
 ```bash
-ncu \
-  --set full \
-  --kernel-name calculate_Matrix \
-  -o naive_full \
-  ./My_naive_kernel_benchmark 4096 4096 4096 --iters 50 --no-check
+ncu-ui 1.naive_kernel/profiling/raw/naive_full.ncu-rep
+ncu-ui 1.naive_kernel/profiling/raw/naive_instr.ncu-rep
 ```
 
-## 3. 如果你想固定单次 case，建议记在这里
-
-```bash
-# example
-./My_naive_kernel_benchmark 1024 1024 1024 --iters 100 --no-check
-```
-
-## 4. 这一版建议重点看的 section
-
-- Summary
-- Speed Of Light
-- Instruction Statistics
-- Memory Workload Analysis
-- Scheduler Statistics
-- Source
-
-## 5. 记录模板
-
-- Profile date:
-- GPU:
-- Matrix size:
-- Block size:
-- Warmup / iters:
-- Binary commit or note:
+重点查看 Speed Of Light、Instruction Statistics、Memory Workload Analysis、
+Scheduler Statistics 和 Source。Nsight Compute 会 replay kernel，报告采集期间
+程序打印的 latency 不作为正式 benchmark 数据。

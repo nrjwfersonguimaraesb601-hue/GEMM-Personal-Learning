@@ -28,8 +28,9 @@ Avg/Best GFLOPS、寄存器数、shared memory 用量和几何平均加速比。
 | `Shared_Memory_Layout_Padding_kernel.cu` | Stage 7 padding kernel 的模板化实现 |
 | `autotune_padding_benchmark.cu` | 正确性、批量 benchmark、CSV 和排名 |
 | `run_autotune.sh` | 编译并运行 quick/full suite |
-| `autotune_full.csv` | 7 个矩阵、14 个配置的完整原始结果 |
-| `ncu_C00_4096.ncu-rep` / `ncu_C08_4096.ncu-rep` | 基准与候选配置的 Nsight Compute 报告 |
+| `results/autotune_full.csv` | 7 个矩阵、14 个配置的完整原始结果 |
+| `results/logs/` | quick/full 编译资源与 console 日志 |
+| `profiling/raw/ncu_C00_4096.ncu-rep` / `ncu_C08_4096.ncu-rep` | 基准与候选配置的 Nsight Compute 报告 |
 | [`profiling/`](./profiling/README.md) | 报告说明和分类截图 |
 
 ## 运行
@@ -70,7 +71,7 @@ CUDA_ARCH=sm_89 ./run_autotune.sh quick
 ## 完整 suite 结果
 
 测试环境为 NVIDIA GeForce RTX 4060 Laptop GPU，warmup 10 次，正式迭代 50 次。
-下表使用同一轮 `autotune_full.csv` 的 Avg GFLOPS；百分比相对同一轮的 C00，
+下表使用同一轮 `results/autotune_full.csv` 的 Avg GFLOPS；百分比相对同一轮的 C00，
 不是与 Stage 7 历史测试轮次直接混合。
 
 | Case | C00 `64x64x8, 8x8` | C08 `128x64x16, 8x8` | Change |
@@ -95,6 +96,7 @@ C08 是本轮 7 个 case 的综合候选，在 `4096^3` 达到 `9664.98 GFLOPS`
 
 ## 相关记录
 
-- [完整原始 CSV](./autotune_full.csv)
+- [完整原始 CSV](./results/autotune_full.csv)
+- [实验输出和日志](./results/README.md)
 - [Nsight Compute 报告与截图](./profiling/README.md)
 - [根目录性能汇总](../PERFORMANCE_SUMMARY.md)

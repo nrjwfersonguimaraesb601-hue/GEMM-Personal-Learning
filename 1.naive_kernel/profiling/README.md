@@ -18,12 +18,12 @@
 
 建议先按下面这个顺序看：
 
-1. [full_report/figures/01_summary.png](/home/fish/GEMM_For_Myself/naive_kernel/profiling/full_report/figures/01_summary.png)
-2. [full_report/figures/02_speed_of_light.png](/home/fish/GEMM_For_Myself/naive_kernel/profiling/full_report/figures/02_speed_of_light.png)
-3. [full_report/figures/03_memory_workload.png](/home/fish/GEMM_For_Myself/naive_kernel/profiling/full_report/figures/03_memory_workload.png)
-4. [full_report/figures/04_scheduler_statistics.png](/home/fish/GEMM_For_Myself/naive_kernel/profiling/full_report/figures/04_scheduler_statistics.png)
-5. [full_report/figures/05_warp_state.png](/home/fish/GEMM_For_Myself/naive_kernel/profiling/full_report/figures/05_warp_state.png)
-6. [instr_report/figures/01_instruction_statistics_and_mix.png](/home/fish/GEMM_For_Myself/naive_kernel/profiling/instr_report/figures/01_instruction_statistics_and_mix.png)
+1. [full report summary](./full_report/figures/01_summary.png)
+2. [speed of light](./full_report/figures/02_speed_of_light.png)
+3. [memory workload](./full_report/figures/03_memory_workload.png)
+4. [scheduler statistics](./full_report/figures/04_scheduler_statistics.png)
+5. [warp state](./full_report/figures/05_warp_state.png)
+6. [instruction statistics and mix](./instr_report/figures/01_instruction_statistics_and_mix.png)
 
 如果想先抓主线，可以只看前 3 张。  
 如果想把“问题是怎么一层层传导到调度和 stall 上”的链条看完整，再继续看后 3 张。
@@ -67,13 +67,13 @@
 
 ## 这个目录里放了什么
 
-- [capture_commands.md](/home/fish/GEMM_For_Myself/naive_kernel/profiling/capture_commands.md)
+- [capture_commands.md](./capture_commands.md)
   记录当前采集命令
-- [visual_checklist.md](/home/fish/GEMM_For_Myself/naive_kernel/profiling/visual_checklist.md)
+- [visual_checklist.md](./visual_checklist.md)
   记录这一版最值得保留的图
-- [instr_report/README.md](/home/fish/GEMM_For_Myself/naive_kernel/profiling/instr_report/README.md)
+- [instr_report/README.md](./instr_report/README.md)
   指令报告逐图解读
-- [full_report/README.md](/home/fish/GEMM_For_Myself/naive_kernel/profiling/full_report/README.md)
+- [full_report/README.md](./full_report/README.md)
   完整报告逐图解读
 
 `Source` 截图这次我没有强行保留，因为这套材料已经足够把主线讲清楚了。后面如果我想专门讲 kernel 代码热点，再单独补也完全来得及。

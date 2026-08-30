@@ -21,12 +21,12 @@
 
 建议先和 naive 对照着看，而不是单看这一版：
 
-1. [full_report/figures/01_summary.png](/home/fish/GEMM_For_Myself/Global_Memory_Coalescing_kernel/profiling/full_report/figures/01_summary.png)
-2. [full_report/figures/02_speed_of_light.png](/home/fish/GEMM_For_Myself/Global_Memory_Coalescing_kernel/profiling/full_report/figures/02_speed_of_light.png)
-3. [full_report/figures/03_memory_workload.png](/home/fish/GEMM_For_Myself/Global_Memory_Coalescing_kernel/profiling/full_report/figures/03_memory_workload.png)
-4. [full_report/figures/04_scheduler_statistics.png](/home/fish/GEMM_For_Myself/Global_Memory_Coalescing_kernel/profiling/full_report/figures/04_scheduler_statistics.png)
-5. [full_report/figures/05_warp_state.png](/home/fish/GEMM_For_Myself/Global_Memory_Coalescing_kernel/profiling/full_report/figures/05_warp_state.png)
-6. [instr_report/figures/01_instruction_statistics_and_mix.png](/home/fish/GEMM_For_Myself/Global_Memory_Coalescing_kernel/profiling/instr_report/figures/01_instruction_statistics_and_mix.png)
+1. [full report summary](./full_report/figures/01_summary.png)
+2. [speed of light](./full_report/figures/02_speed_of_light.png)
+3. [memory workload](./full_report/figures/03_memory_workload.png)
+4. [scheduler statistics](./full_report/figures/04_scheduler_statistics.png)
+5. [warp state](./full_report/figures/05_warp_state.png)
+6. [instruction statistics and mix](./instr_report/figures/01_instruction_statistics_and_mix.png)
 
 只要把 `naive` 和 `gmemc` 的 `summary / speed_of_light / memory_workload` 三张图并排看，很多结论其实就已经出来了。
 
@@ -71,9 +71,9 @@
 
 ## 这个目录里放了什么
 
-- [capture_commands.md](/home/fish/GEMM_For_Myself/Global_Memory_Coalescing_kernel/profiling/capture_commands.md)
-- [visual_checklist.md](/home/fish/GEMM_For_Myself/Global_Memory_Coalescing_kernel/profiling/visual_checklist.md)
-- [instr_report/README.md](/home/fish/GEMM_For_Myself/Global_Memory_Coalescing_kernel/profiling/instr_report/README.md)
-- [full_report/README.md](/home/fish/GEMM_For_Myself/Global_Memory_Coalescing_kernel/profiling/full_report/README.md)
+- [capture_commands.md](./capture_commands.md)
+- [visual_checklist.md](./visual_checklist.md)
+- [instr_report/README.md](./instr_report/README.md)
+- [full_report/README.md](./full_report/README.md)
 
 如果后面我还想让这版更完整，最值得额外补的一张还是 `Memory Chart`，因为它最适合拿来和 naive 做“transaction 利用率改善”的直观对照。
