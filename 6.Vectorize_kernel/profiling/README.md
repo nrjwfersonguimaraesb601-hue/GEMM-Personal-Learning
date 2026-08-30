@@ -46,5 +46,5 @@ load/store 映射、shared-memory layout，以及只使用半个 global-store se
 - [Instruction report notes](./instr_report/README.md)
 - [Capture commands](./capture_commands.md)
 - [Visual checklist](./visual_checklist.md)
-- [Full `.ncu-rep`](../Vectorize_full.ncu-rep)
-- [Instruction `.ncu-rep`](../Vectorize_instr.ncu-rep)
+- [Full `.ncu-rep`](./raw/Vectorize_full.ncu-rep)
+- [Instruction `.ncu-rep`](./raw/Vectorize_instr.ncu-rep)

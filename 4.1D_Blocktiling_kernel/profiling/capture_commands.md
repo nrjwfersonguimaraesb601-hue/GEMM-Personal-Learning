@@ -1,38 +1,23 @@
-# 1D Blocktiling Capture Commands
-
-下面这组命令按当前目录里的 benchmark 口径整理：
-
-- block: `512 x 1`
-- warmup: `10`
-- iterations: `50`
-- correctness check: `disabled`
-
-## 1. 采 instruction-only 报告
+# 1D Block Tiling Capture Commands
 
 ```bash
-ncu \
-  --set full \
-  --section InstructionStats \
-  --kernel-name calculate_Matrix \
-  -o 1D_Blocktiling_instr \
-  ./1D_Blocktiling_kernel_benchmark 4096 4096 4096 --iters 50 --no-check
+cd /home/fish/GEMM_For_Myself
+make 1d
+./scripts/profile_stage.sh 1d full
+./scripts/profile_stage.sh 1d instr
 ```
 
-## 2. 采完整报告
+报告写入：
+
+```text
+4.1D_Blocktiling_kernel/profiling/raw/1D_Blocktiling_full.ncu-rep
+4.1D_Blocktiling_kernel/profiling/raw/1D_Blocktiling_instr.ncu-rep
+```
 
 ```bash
-ncu \
-  --set full \
-  --kernel-name calculate_Matrix \
-  -o 1D_Blocktiling_full \
-  ./1D_Blocktiling_kernel_benchmark 4096 4096 4096 --iters 50 --no-check
+ncu-ui 4.1D_Blocktiling_kernel/profiling/raw/1D_Blocktiling_full.ncu-rep
+ncu-ui 4.1D_Blocktiling_kernel/profiling/raw/1D_Blocktiling_instr.ncu-rep
 ```
 
-## 3. 记录模板
-
-- Profile date:
-- GPU:
-- Matrix size:
-- Block size:
-- Warmup / iters:
-- Binary note:
+重点观察 register reuse、occupancy、scheduler 和指令吞吐。Nsight Compute 的
+kernel replay 会放大程序内计时，不能用该 latency 与正常 benchmark 比较。

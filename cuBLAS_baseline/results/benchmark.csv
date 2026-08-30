@@ -1,0 +1,5 @@
+case,M,N,K,mode,check,avg_gflops,best_gflops,source,notes
+square_4096,4096,4096,4096,fp32,SKIP,9429.4001,9553.0118,cublas_validation,primary FP32 record
+square_4096_independent,4096,4096,4096,fp32,SKIP,9357.0652,9532.5090,independent_run,normal FP32 validation
+square_4096_tf32_override_off,4096,4096,4096,fp32,SKIP,9308.8622,9548.8918,independent_run,NVIDIA_TF32_OVERRIDE=0
+square_4096_tf32,4096,4096,4096,tf32,SKIP,14844.7540,15925.2171,cublas_tf32_reference,separate Tensor Core reference

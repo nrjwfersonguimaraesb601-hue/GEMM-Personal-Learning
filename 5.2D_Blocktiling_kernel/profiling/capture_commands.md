@@ -1,23 +1,23 @@
-# 2D Blocktiling Capture Commands
+# 2D Block Tiling Capture Commands
 
 ```bash
-# Full report
-ncu -f --set full \
-  --kernel-name-base demangled \
-  --kernel-name regex:.*sgemm_2d.* \
-  --launch-skip 1 --launch-count 1 \
-  -o 2D_Blocktiling_full \
-  ./2D_Blocktiling_bench 1024 1024 1024 \
-  --warmup 1 --iters 3 --bx 64 --by 1 --no-check
-
-# Instruction statistics
-ncu -f --section InstructionStats \
-  --kernel-name-base demangled \
-  --kernel-name regex:.*sgemm_2d.* \
-  --launch-skip 1 --launch-count 1 \
-  -o 2D_Blocktiling_InstructionStats \
-  ./2D_Blocktiling_bench 1024 1024 1024 \
-  --warmup 1 --iters 3 --bx 64 --by 1 --no-check
+cd /home/fish/GEMM_For_Myself
+make 2d
+./scripts/profile_stage.sh 2d full
+./scripts/profile_stage.sh 2d instr
 ```
 
-如果 kernel 使用 `calculate_Matrix`，将 regex 改为 `regex:.*calculate_Matrix.*`。
+报告写入：
+
+```text
+5.2D_Blocktiling_kernel/profiling/raw/2D_Blocktiling_full.ncu-rep
+5.2D_Blocktiling_kernel/profiling/raw/2D_Blocktiling_InstructionStats.ncu-rep
+```
+
+```bash
+ncu-ui 5.2D_Blocktiling_kernel/profiling/raw/2D_Blocktiling_full.ncu-rep
+ncu-ui 5.2D_Blocktiling_kernel/profiling/raw/2D_Blocktiling_InstructionStats.ncu-rep
+```
+
+重点观察二维 thread tile 带来的 register reuse、occupancy 和 scheduler 变化。
+Profiler latency 不计入正式 benchmark。

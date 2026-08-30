@@ -1,43 +1,23 @@
-# SMEM Kernel Capture Commands
-
-## 1. instruction-only 报告
+# Shared-memory Kernel Capture Commands
 
 ```bash
-ncu \
-  --set full \
-  --section InstructionStats \
-  --kernel-name calculate_Matrix \
-  -o smem_instr \
-  ./My_SMEM_kernel_benchmark 4096 4096 4096 --iters 50 --no-check
+cd /home/fish/GEMM_For_Myself
+make smem
+./scripts/profile_stage.sh smem full
+./scripts/profile_stage.sh smem instr
 ```
 
-## 2. 完整报告
+报告写入：
+
+```text
+3.SMEM_kernel/profiling/raw/smem_full.ncu-rep
+3.SMEM_kernel/profiling/raw/smem_instr.ncu-rep
+```
 
 ```bash
-ncu \
-  --set full \
-  --kernel-name calculate_Matrix \
-  -o smem_full \
-  ./My_SMEM_kernel_benchmark 4096 4096 4096 --iters 50 --no-check
+ncu-ui 3.SMEM_kernel/profiling/raw/smem_full.ncu-rep
+ncu-ui 3.SMEM_kernel/profiling/raw/smem_instr.ncu-rep
 ```
 
-## 3. 建议重点看的 section
-
-- Summary
-- Speed Of Light
-- Instruction Statistics
-- Memory Workload Analysis
-- Shared Memory
-- Occupancy
-- Scheduler Statistics
-- Source
-
-## 4. 记录模板
-
-- Profile date:
-- GPU:
-- Matrix size:
-- Tile size:
-- Block size:
-- Warmup / iters:
-- Compare target: coalesced + naive
+重点查看 shared-memory reuse、occupancy、Memory Workload Analysis、Scheduler
+Statistics 和指令构成。Profiler latency 只作采集上下文，不是 benchmark 数据。

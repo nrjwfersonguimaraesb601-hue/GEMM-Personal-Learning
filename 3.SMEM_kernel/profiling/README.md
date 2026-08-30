@@ -26,12 +26,12 @@
 
 这一版最好按“先看结构变化，再看代价”的顺序读：
 
-1. [instr_report/figures/01_instruction_statistics_and_mix.png](/home/fish/GEMM_For_Myself/SMEM_kernel/profiling/instr_report/figures/01_instruction_statistics_and_mix.png)
-2. [full_report/figures/01_summary.png](/home/fish/GEMM_For_Myself/SMEM_kernel/profiling/full_report/figures/01_summary.png)
-3. [full_report/figures/02_speed_of_light.png](/home/fish/GEMM_For_Myself/SMEM_kernel/profiling/full_report/figures/02_speed_of_light.png)
-4. [full_report/figures/03_memory_workload.png](/home/fish/GEMM_For_Myself/SMEM_kernel/profiling/full_report/figures/03_memory_workload.png)
-5. [full_report/figures/04_scheduler_statistics.png](/home/fish/GEMM_For_Myself/SMEM_kernel/profiling/full_report/figures/04_scheduler_statistics.png)
-6. [full_report/figures/05_warp_state.png](/home/fish/GEMM_For_Myself/SMEM_kernel/profiling/full_report/figures/05_warp_state.png)
+1. [instruction statistics and mix](./instr_report/figures/01_instruction_statistics_and_mix.png)
+2. [full report summary](./full_report/figures/01_summary.png)
+3. [speed of light](./full_report/figures/02_speed_of_light.png)
+4. [memory workload](./full_report/figures/03_memory_workload.png)
+5. [scheduler statistics](./full_report/figures/04_scheduler_statistics.png)
+6. [warp state](./full_report/figures/05_warp_state.png)
 
 如果只看一张最能体现“shared memory 真的进场了”的图，那就是第一张 instruction mix。
 如果只看一张最能体现“它也带来了新代价”的图，那就是 `warp_state`。
@@ -91,10 +91,10 @@
 
 ## 这个目录里放了什么
 
-- [capture_commands.md](/home/fish/GEMM_For_Myself/SMEM_kernel/profiling/capture_commands.md)
-- [visual_checklist.md](/home/fish/GEMM_For_Myself/SMEM_kernel/profiling/visual_checklist.md)
-- [instr_report/README.md](/home/fish/GEMM_For_Myself/SMEM_kernel/profiling/instr_report/README.md)
-- [full_report/README.md](/home/fish/GEMM_For_Myself/SMEM_kernel/profiling/full_report/README.md)
+- [capture_commands.md](./capture_commands.md)
+- [visual_checklist.md](./visual_checklist.md)
+- [instr_report/README.md](./instr_report/README.md)
+- [full_report/README.md](./full_report/README.md)
 
 如果后面我继续补图，这一版最值得再追加的是：
 

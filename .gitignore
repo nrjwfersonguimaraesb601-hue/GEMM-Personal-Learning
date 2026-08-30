@@ -1,2 +1,11 @@
 .vscode/
+.serena/
 
+# Unified local build output.
+build/
+*.o
+*.out
+*_bench
+*_benchmark
+__pycache__/
+*.pyc

@@ -20,8 +20,8 @@
 
 原始报告：
 
-- [`ncu_C00_4096.ncu-rep`](../ncu_C00_4096.ncu-rep)
-- [`ncu_C08_4096.ncu-rep`](../ncu_C08_4096.ncu-rep)
+- [`ncu_C00_4096.ncu-rep`](./raw/ncu_C00_4096.ncu-rep)
+- [`ncu_C08_4096.ncu-rep`](./raw/ncu_C08_4096.ncu-rep)
 
 截图文件按指标分类并采用与其他 kernel 阶段相同的英文命名，避免保留来自聊天
 工具的临时文件名。
@@ -36,19 +36,17 @@ double buffering 和 `cp.async` 做更有针对性的实验。
 Nsight Compute 采集应针对单个模板实例，并使用与普通 benchmark 相同的架构：
 
 ```bash
-cd /home/fish/GEMM_For_Myself/8.Autoing_kernel
+cd /home/fish/GEMM_For_Myself
 
-nvcc -O3 -std=c++17 -lineinfo -arch=sm_89 \
-  --ptxas-options=-v autotune_padding_benchmark.cu \
-  -o autotune_padding_bench
+make autotuning
 
 # 根据目标模板实例的 demangled kernel name 调整 --kernel-name。
 ncu -f --set full \
   --kernel-name-base demangled \
   --kernel-name 'regex:.*sgemm_shared_memory_layout_padding.*' \
   --launch-count 1 \
-  -o ncu_stage8 \
-  ./autotune_padding_bench --suite quick --warmup 0 --iters 1 \
+  -o 8.Autoing_kernel/profiling/raw/ncu_stage8 \
+  ./build/autotuning_bench --suite quick --warmup 0 --iters 1 \
   --no-verify --csv /tmp/stage8_ncu.csv
 ```
 

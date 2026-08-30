@@ -15,12 +15,12 @@
 
 建议按这个顺序看：
 
-1. [full_report/figures/01_summary.png](/home/fish/GEMM_For_Myself/1D_Blocktiling_kernel/profiling/full_report/figures/01_summary.png)
-2. [full_report/figures/02_speed_of_light.png](/home/fish/GEMM_For_Myself/1D_Blocktiling_kernel/profiling/full_report/figures/02_speed_of_light.png)
-3. [instr_report/figures/01_instruction_statistics_and_mix.png](/home/fish/GEMM_For_Myself/1D_Blocktiling_kernel/profiling/instr_report/figures/01_instruction_statistics_and_mix.png)
-4. [full_report/figures/03_memory_chart.png](/home/fish/GEMM_For_Myself/1D_Blocktiling_kernel/profiling/full_report/figures/03_memory_chart.png)
-5. [full_report/figures/04_scheduler_statistics.png](/home/fish/GEMM_For_Myself/1D_Blocktiling_kernel/profiling/full_report/figures/04_scheduler_statistics.png)
-6. [full_report/figures/05_warp_state.png](/home/fish/GEMM_For_Myself/1D_Blocktiling_kernel/profiling/full_report/figures/05_warp_state.png)
+1. [full report summary](./full_report/figures/01_summary.png)
+2. [speed of light](./full_report/figures/02_speed_of_light.png)
+3. [instruction statistics and mix](./instr_report/figures/01_instruction_statistics_and_mix.png)
+4. [memory chart](./full_report/figures/03_memory_chart.png)
+5. [scheduler statistics](./full_report/figures/04_scheduler_statistics.png)
+6. [warp state](./full_report/figures/05_warp_state.png)
 
 ## 这一版最值得记住的点
 
@@ -38,7 +38,7 @@
 
 ## 目录内容
 
-- [capture_commands.md](/home/fish/GEMM_For_Myself/1D_Blocktiling_kernel/profiling/capture_commands.md)
-- [visual_checklist.md](/home/fish/GEMM_For_Myself/1D_Blocktiling_kernel/profiling/visual_checklist.md)
-- [full_report/README.md](/home/fish/GEMM_For_Myself/1D_Blocktiling_kernel/profiling/full_report/README.md)
-- [instr_report/README.md](/home/fish/GEMM_For_Myself/1D_Blocktiling_kernel/profiling/instr_report/README.md)
+- [capture_commands.md](./capture_commands.md)
+- [visual_checklist.md](./visual_checklist.md)
+- [full_report/README.md](./full_report/README.md)
+- [instr_report/README.md](./instr_report/README.md)
